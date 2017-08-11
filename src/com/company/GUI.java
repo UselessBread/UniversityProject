@@ -61,13 +61,16 @@ public class GUI extends JPanel implements ActionListener{
             verifyResult(resultTest);
             resultList = new JList<>(resultTest);
             resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            resultList.setLayoutOrientation(JList.VERTICAL_WRAP);
+            resultList.setVisibleRowCount(-1);
             listPanel.add(resultList);
 
             JButton nextButton=new JButton("Далее");
             nextButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if(resultList.getSelectedValue().contains("Подсистема")) {
+                    String resultValue=resultList.getSelectedValue().toLowerCase();
+                    if(resultValue.contains("подсистема")) {
                         mainFrame.setEnabled(false);//disable main frame
                         int number = resultList.getSelectedIndex() + 1;//Номер подсистемы (PK)
                         String selectedItem = Integer.toString(number);
@@ -78,8 +81,13 @@ public class GUI extends JPanel implements ActionListener{
                         resultList.setListData(stringVector);
                     }
                     //else and other queries
-                    else{
+                    else if (resultValue.contains("прибор")||resultValue.contains("датчик")){
+                        String prevQueryResult=resultList.getSelectedValue();
+                        Vector<String> stringVector=DBConnection.queryToDeviceOrSensor(prevQueryResult);
+                        verifyResult(stringVector);
 
+                        resultList.removeAll();
+                        resultList.setListData(stringVector);
                     }
                 }
             });
