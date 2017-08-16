@@ -12,7 +12,7 @@ public class Main {
         catch(IllegalAccessException illegalExc){}
         catch(UnsupportedLookAndFeelException uExc){}
 
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+        SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
                 GUI.createAndShowGUI();
