@@ -29,7 +29,7 @@ public class DB {
             Class.forName("com.mysql.jdbc.Driver");
             connection = DriverManager.getConnection(url, user, password);
             statement = connection.createStatement();
-        } catch (java.lang.ClassNotFoundException ex) {
+        } catch (ClassNotFoundException ex) {
            return CLASS_NOT_FOUND;
         } catch (SQLException SQLExc) {
             return SQL_EXCEPTION;
@@ -74,10 +74,10 @@ public class DB {
         try {
             int resultInt = (int) resultObject;
 
-            if(resultInt==DB.CLASS_NOT_FOUND){
+            if(resultInt== DB.CLASS_NOT_FOUND){
                 return  CLASS_NOT_FOUND;
             }
-            else if(resultInt==DB.SQL_EXCEPTION){
+            else if(resultInt== DB.SQL_EXCEPTION){
                 return  SQL_EXCEPTION;
             }
             return OK;
@@ -118,10 +118,12 @@ public class DB {
         }
         return stringVector;
     }
-    public Vector<String> queryToDeviceOrSensor(String result){
+    public Vector<Vector<String>> queryToDeviceOrSensor(String result){
         boolean device=false;
         boolean sensor=false;
-        Vector<String> stringVector=new Vector<>();
+        Vector<String> vectorForList=new Vector<>();
+        Vector<String> vectorForButtons=new Vector<>();
+        Vector<Vector<String>> resultVec=new Vector<>();
         Object resultObject;
         String end=result.substring(result.length()-1);
        deviceOrSensorNumber=Integer.parseInt(end);
@@ -154,43 +156,49 @@ public class DB {
         }
         if (verifyResult(resultObject)==OK) {
             ResultSet resultSet = (ResultSet) resultObject;
+            vectorForList.add("Режим");
+            vectorForList.add("Потребление ресурса 1");
+            vectorForList.add("Потребление ресурса 2");
+            vectorForList.add("Потребление ресурса 3");
+            resultVec.add(vectorForList);
             try {
                 if(device) {
                     while (resultSet.next()) {
                         //stringVector.add(resultSet.getString("idприбор"));
-                        stringVector.add(resultSet.getString("idрежима"));
-                        stringVector.add(resultSet.getString("потребление_ресурса1"));
-                        stringVector.add(resultSet.getString("потребление_ресурса2"));
-                        stringVector.add(resultSet.getString("потребление_ресурса3"));
+                        vectorForButtons.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
+                        resultSet.getString("потребление_ресурса2")+"\t"+resultSet.getString("потребление_ресурса3"));
                     }
                 }
                 if(sensor){
                     while (resultSet.next()) {
                         //stringVector.add(resultSet.getString("idдатчик"));
-                        stringVector.add(resultSet.getString("idрежима"));
-                        stringVector.add(resultSet.getString("потребление_ресурса1"));
-                        stringVector.add(resultSet.getString("потребление_ресурса2"));
-                        stringVector.add(resultSet.getString("потребление_ресурса3"));
+                        vectorForButtons.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
+                        resultSet.getString("потребление_ресурса2")+"\t"+resultSet.getString("потребление_ресурса3"));
                     }
                 }
             } catch (SQLException SQLexc) {
-                stringVector.add(Integer.toString(SQL_EXCEPTION));
-                return stringVector;
+                vectorForButtons.add(Integer.toString(SQL_EXCEPTION));
+                resultVec.add(vectorForButtons);
+                return resultVec;
             }
         }
         else if(verifyResult(resultObject)==CLASS_NOT_FOUND){
-            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
-            return stringVector;
+            vectorForButtons.add(Integer.toString(CLASS_NOT_FOUND));
+            resultVec.add(vectorForButtons);
+            return resultVec;
         }
         else if(verifyResult(resultObject)==SQL_EXCEPTION){
-            stringVector.add(Integer.toString(SQL_EXCEPTION));
-            return stringVector;
+            vectorForButtons.add(Integer.toString(SQL_EXCEPTION));
+            resultVec.add(vectorForButtons);
+            return resultVec;
         }
         else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
-            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
-            return stringVector;
+            vectorForButtons.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            resultVec.add(vectorForButtons);
+            return resultVec;
         }
-        return stringVector;
+        resultVec.add(vectorForButtons);
+        return resultVec;
     }
 
 }
