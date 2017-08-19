@@ -2,27 +2,30 @@ package com.company;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
+import java.awt.event.*;
 import java.util.HashMap;
 import java.util.Vector;
 
-import static com.company.GUI.*;
+import static com.company.AlgorithmMaker.*;
+import static com.company.MainWindow.*;
 
 
- class NewAlgorithmWindow {
-    private JFrame listFrame;
+
+ class NewAlgorithmWindow implements WindowListener{
+     //private HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
+     private JFrame listFrame;
     private JPanel resultButtonPanel=new JPanel();
     private JList<String> resultList;
     private ActionEvent e;
     private DB DBConnection;
+    private Vector<String> resultTest;
     private Vector<Vector<String>> historyVector=new Vector<>();
      NewAlgorithmWindow(ActionEvent e, DB db){
-        this.e=e;
-        DBConnection=db;
-        placeClassNameHere();
+         this.e=e;
+         DBConnection=db;
+         algorithmMakerFrame.setVisible(false);//disable main frame
+         algorithmMakerFrame.setEnabled(true);
+         placeClassNameHere();
     }
     private void placeClassNameHere() {
         JPanel nextButtonPanel = new JPanel();
@@ -32,11 +35,11 @@ import static com.company.GUI.*;
         Vector<String> forLogging=new Vector<>();
 
         //If the "создать алгоритм" button pressed
-        if (e.getActionCommand().equals(GUI.NEW_ALGORITHM)) {
+        if (e.getActionCommand().equals(AlgorithmMaker.NEW_ALGORITHM)) {
             JPanel listPanel = new JPanel();
             listPanel.setOpaque(true);
 
-            Vector<String> resultTest = DBConnection.firstQuery();
+            resultTest = DBConnection.firstQuery();
             verifyResult(resultTest);
             historyVector.add(resultTest);
             resultList = new JList<>(resultTest);
@@ -51,15 +54,12 @@ import static com.company.GUI.*;
                 public void actionPerformed(ActionEvent e) {
                     String resultValue = resultList.getSelectedValue().toLowerCase();
                     if (resultValue.contains("подсистема")) {
-                        mainFrame.setEnabled(false);//disable main frame
                         int number = resultList.getSelectedIndex() + 1;//Номер подсистемы (PK)
                         forLogging.add("Подсистема"+number);
                         String selectedItem = Integer.toString(number);
                         Vector<String> stringVector = DBConnection.queryToPodsys(selectedItem);
                         verifyResult(stringVector);
                         historyVector.add(stringVector);
-
-
                         resultList.removeAll();
                         resultList.setListData(stringVector);
                     }
@@ -81,6 +81,7 @@ import static com.company.GUI.*;
                         String logContent=log.getText();
                         String[] formats={"Часы","Минуты","Секунды","Миллисекунды"};
                         JComboBox<String> delayFormatChooser=new JComboBox<>(formats);
+                        delayFormatChooser.setSelectedIndex(2);
                             String[] logContentSplit = logContent.split("\n");
                             Vector<String> deviceToQueueChooser = new Vector<>();
                         deviceToQueueChooser.add(" ");
@@ -127,8 +128,9 @@ import static com.company.GUI.*;
                                 @Override
                                 public void actionPerformed(ActionEvent e) {
                                     String delayFieldResult = delayField.getText();
+                                    boolean test=delayActivator.isSelected();
                                     //Make someone to enter value in delayField
-                                    if (!delayFieldResult.equals("")) {
+                                    if (((delayField.getText().equals(""))&&!(delayActivator.isSelected()))||!(delayField.getText().equals(""))&&(delayActivator.isSelected())) {
                                     boolean ifDelayChosen = false;
                                     String chosenDeviceMode = e.getActionCommand();
                                     for (String str : forLogging) {
@@ -138,7 +140,7 @@ import static com.company.GUI.*;
 
                                         String delay;
                                         if (delayActivator.isSelected()) {
-                                            delay = delayField.getText() + "/" + delayFormatChooser.getSelectedItem() + " ";
+                                            delay = delayField.getText() + "/" + delayFormatChooser.getSelectedItem(); //Убрал +" " в конце после delayFormatChooser...
                                             ifDelayChosen = true;
                                         } else {
                                             delay = delayFieldResult;
@@ -146,21 +148,27 @@ import static com.company.GUI.*;
                                         }
                                         HashMap<String, String> deviceAndDelay = new HashMap<>();
                                         deviceAndDelay.putIfAbsent(chosenDeviceAndMode, delay);
+                                        /*String queueChooserResult=(String)queueChooser.getSelectedItem();
+                                        if(queueChooserResult.equals(""))
+                                            queueChooserResult=AlgorithmMaker.AFTER_ALGORUTHM_STARTS;*/
                                         deviceAndDelayAndRelativeDevice.putIfAbsent(deviceAndDelay, (String) queueChooser.getSelectedItem());
+                                        //MainWindow.deviceAndDelayAndRelativeDeviceOpenedVector.add(deviceAndDelayAndRelativeDevice);
                                         String queueSelectedItem = (String) queueChooser.getSelectedItem();
-                                        GUI.log.append(chosenDeviceAndMode + " " + delay);
+                                        AlgorithmMaker.log.append(chosenDeviceAndMode + " " + delay);
                                         if (ifDelayChosen) {
                                             if (queueSelectedItem.equals(" ")) {
-                                                GUI.log.append("После стара алгоритма\n");
+                                                AlgorithmMaker.log.append("После стара алгоритма\n");
                                             } else {
-                                                GUI.log.append("После запуска " + queueSelectedItem + "\n");
+                                                AlgorithmMaker.log.append("После запуска " + queueSelectedItem + "\n");
                                             }
                                         }
+                                        else
+                                            AlgorithmMaker.log.append("\n");
                                         chosenDeviceAndMode = "";
                                         listPanel.remove(resultButtonPanel);
                                         listFrame.dispose();
-                                        mainFrame.setVisible(true);
-                                        mainFrame.setEnabled(true);
+                                        algorithmMakerFrame.setVisible(true);
+                                        algorithmMakerFrame.setEnabled(true);
 
                                     }
                                 }
@@ -180,16 +188,23 @@ import static com.company.GUI.*;
             backButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if (historyVector.size() > 0) {
+                    Vector<String> firstHistoryElement=historyVector.firstElement();
+                    if(!firstHistoryElement.elementAt(0).contains("Подсистема"))
+                        historyVector.add(0,resultTest);
+                    if (historyVector.size() > 1) {
                         resultButtonPanel.removeAll();
                         listPanel.remove(resultButtonPanel);
+                        listPanel.remove(delayPanel);
                         nextButton.setVisible(true);
                         resultList.setVisible(true);
                         resultList.removeAll();
-                        resultList.setListData(historyVector.lastElement());
+                        int vecSize=historyVector.size();
+                        resultList.setListData(historyVector.elementAt(vecSize-2));
                         listPanel.add(resultList, BoxLayout.Y_AXIS);
                         nextButtonPanel.add(nextButton);
+                        historyVector.remove(historyVector.elementAt(vecSize-2));
                         historyVector.remove(historyVector.lastElement());
+                        listFrame.repaint();
 
                     }
                 }
@@ -202,8 +217,9 @@ import static com.company.GUI.*;
             listFrame = new JFrame("Results");
             listFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
             listFrame.setContentPane(listPanel);
-            listFrame.setPreferredSize(new Dimension(400, 250));
-            listFrame.setLocationRelativeTo(mainFrame);
+            listFrame.setPreferredSize(new Dimension(500, 300));
+            listFrame.setLocationRelativeTo(algorithmMakerFrame);
+            listFrame.addWindowListener(this);
             listFrame.pack();
             listFrame.setVisible(true);
         }
@@ -234,4 +250,40 @@ import static com.company.GUI.*;
         }
 
     }
-}
+
+     @Override
+     public void windowOpened(WindowEvent e) {
+
+     }
+
+     @Override
+     public void windowClosing(WindowEvent e) {
+        algorithmMakerFrame.setEnabled(true);
+        algorithmMakerFrame.setVisible(true);
+     }
+
+     @Override
+     public void windowClosed(WindowEvent e) {
+
+     }
+
+     @Override
+     public void windowIconified(WindowEvent e) {
+
+     }
+
+     @Override
+     public void windowDeiconified(WindowEvent e) {
+
+     }
+
+     @Override
+     public void windowActivated(WindowEvent e) {
+
+     }
+
+     @Override
+     public void windowDeactivated(WindowEvent e) {
+
+     }
+ }
