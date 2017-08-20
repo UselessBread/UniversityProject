@@ -16,7 +16,6 @@ import static com.company.MainWindow.mainFrame;
 public class AlgorithmMaker extends JPanel implements ActionListener{
     static final String NEW_ALGORITHM="Create new algorithm";
     //static final String AFTER_ALGORUTHM_STARTS="After beginning";//in queueChooser
-    private final String RUN="Run algorithm";
     private JButton runButton;
     static JTextArea log=new JTextArea(30,80);
     static JFrame algorithmMakerFrame;

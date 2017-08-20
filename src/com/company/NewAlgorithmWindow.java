@@ -150,7 +150,7 @@ import static com.company.MainWindow.*;
                                         deviceAndDelay.putIfAbsent(chosenDeviceAndMode, delay);
                                         /*String queueChooserResult=(String)queueChooser.getSelectedItem();
                                         if(queueChooserResult.equals(""))
-                                            queueChooserResult=AlgorithmMaker.AFTER_ALGORUTHM_STARTS;*/
+                                            queueChooserResult=AlgorithmMaker.AFTER_ALGORITHM_STARTS;*/
                                         deviceAndDelayAndRelativeDevice.putIfAbsent(deviceAndDelay, (String) queueChooser.getSelectedItem());
                                         //MainWindow.deviceAndDelayAndRelativeDeviceOpenedVector.add(deviceAndDelayAndRelativeDevice);
                                         String queueSelectedItem = (String) queueChooser.getSelectedItem();

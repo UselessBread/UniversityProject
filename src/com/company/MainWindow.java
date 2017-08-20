@@ -8,7 +8,7 @@ import java.util.Vector;
 
 public class MainWindow extends JPanel implements ActionListener{
     //static HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
-    static Vector<HashMap<HashMap<String,String>,String>> deviceAndDelayAndRelativeDeviceOpenedVector=new Vector<>();
+    static Vector<HashMap<HashMap<String,String>,String>> deviceAndDelayAndRelativeDeviceVector=new Vector<>();
     private final String NEW_ALGORITHM="Create new algorithm";
     private final String OPEN="Open algorithm";
 
