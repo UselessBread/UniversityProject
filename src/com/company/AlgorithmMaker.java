@@ -5,8 +5,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.util.HashMap;
 
+import static com.company.MainWindow.deviceAndDelayAndRelativeDeviceVector;
 import static com.company.MainWindow.mainFrame;
 
 /**
@@ -15,14 +15,15 @@ import static com.company.MainWindow.mainFrame;
 //Перенести запросы в DB
 public class AlgorithmMaker extends JPanel implements ActionListener{
     static final String NEW_ALGORITHM="Create new algorithm";
-    //static final String AFTER_ALGORUTHM_STARTS="After beginning";//in queueChooser
+    static final String SAVE_BUTTON ="Save button pressed";
+    //static final String AFTER_ALGORITHM_STARTS="After beginning";//in queueChooser
     private JButton runButton;
     static JTextArea log=new JTextArea(30,80);
     static JFrame algorithmMakerFrame;
     private JPanel main,buttonPanel;
     private DB DBConnection;
     static String chosenDeviceAndMode="";
-    static HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
+    //static HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
     private AlgorithmMaker(){
         DBConnection=new DB();
         int state=DBConnection.state;
@@ -42,11 +43,17 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
         labelPanel.setVerticalTextPosition(JLabel.CENTER);
         labelPanel.setHorizontalTextPosition(JLabel.CENTER);
 
-        JButton listShowButton=new JButton("Новый алгоритм");
+        JButton listShowButton=new JButton("Добавить действие");
         listShowButton.setActionCommand(NEW_ALGORITHM);
         listShowButton.addActionListener(this);
+        JButton saveButton=new JButton("Сохранить алгоритм");
+        saveButton.setActionCommand(SAVE_BUTTON);
+        saveButton.addActionListener(this);
+
+
         buttonPanel=new JPanel();
         buttonPanel.add(listShowButton);
+        buttonPanel.add(saveButton);
 
         JScrollPane logPane=new JScrollPane(log);
         log.setEditable(false);
@@ -64,7 +71,32 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
 
     @Override
     public void actionPerformed(ActionEvent e){
-        NewAlgorithmWindow algorithmWindow=new NewAlgorithmWindow(e,DBConnection);
+        if(e.getActionCommand().equals(NEW_ALGORITHM)) {
+            NewAlgorithmWindow algorithmWindow = new NewAlgorithmWindow(e, DBConnection);
+        }
+        if(e.getActionCommand().equals(SAVE_BUTTON)){
+            JPanel mainPanel=new JPanel();
+            JTextField nameField=new JTextField(10);
+            JButton confirmSaveButton=new JButton("Сохранить");
+            mainPanel.add(nameField);
+            mainPanel.add(confirmSaveButton);
+            mainPanel.setOpaque(true);
+            JFrame saveFrame=new JFrame("Сохранение");
+            saveFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            saveFrame.setContentPane(mainPanel);
+            saveFrame.pack();
+            saveFrame.setVisible(true);
+            confirmSaveButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    String name=nameField.getText();
+                    if(name.length()>0){
+                        int res=DBConnection.saveToDB(name,deviceAndDelayAndRelativeDeviceVector);
+                        saveFrame.dispose();
+                    }
+                }
+            });
+        }
     }
 
 
@@ -87,7 +119,6 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
         AlgorithmMaker contentPane=new AlgorithmMaker();
         contentPane.setOpaque(true);
         algorithmMakerFrame.setContentPane(contentPane);
-        //algorithmMakerFrame.setLocation(750,350);
         algorithmMakerFrame.setLocationRelativeTo(MainWindow.mainFrame);
         algorithmMakerFrame.addWindowListener(new WindowListener() {
             @Override

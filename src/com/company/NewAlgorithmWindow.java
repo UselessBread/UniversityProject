@@ -12,7 +12,7 @@ import static com.company.MainWindow.*;
 
 
  class NewAlgorithmWindow implements WindowListener{
-     //private HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
+     private HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
      private JFrame listFrame;
     private JPanel resultButtonPanel=new JPanel();
     private JList<String> resultList;
@@ -152,6 +152,7 @@ import static com.company.MainWindow.*;
                                         if(queueChooserResult.equals(""))
                                             queueChooserResult=AlgorithmMaker.AFTER_ALGORITHM_STARTS;*/
                                         deviceAndDelayAndRelativeDevice.putIfAbsent(deviceAndDelay, (String) queueChooser.getSelectedItem());
+                                        deviceAndDelayAndRelativeDeviceVector.add(deviceAndDelayAndRelativeDevice);
                                         //MainWindow.deviceAndDelayAndRelativeDeviceOpenedVector.add(deviceAndDelayAndRelativeDevice);
                                         String queueSelectedItem = (String) queueChooser.getSelectedItem();
                                         AlgorithmMaker.log.append(chosenDeviceAndMode + " " + delay);

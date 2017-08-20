@@ -4,18 +4,22 @@ package com.company;
  * Created by Игорь on 08.08.2017.
  */
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Set;
 import java.util.Vector;
 
 public class DB {
-    public static  final int CLASS_NOT_FOUND=-1;
-    public static  final int SQL_EXCEPTION=-2;
-    public static  final int CLASS_CAST_EXCEPTION=-3;
-    public static  final int OK=2;
-    private int subsystemNumber,deviceNumber,sensorNumber,deviceOrSensorNumber;
+    static  final int CLASS_NOT_FOUND=-11;
+    static  final int SQL_EXCEPTION=-12;
+    static  final int CLASS_CAST_EXCEPTION=-13;
+    static  final int OK=12;
+    private int subsystemNumber,deviceOrSensorNumber;
     private Connection connection = null;
     private Statement statement = null;
+    Savepoint savepoint;
     ResultSet result;
-    public int state;
+    int state;
 
     public DB() {
         String url = "jdbc:mysql://127.0.0.1:3306/ка";
@@ -200,5 +204,89 @@ public class DB {
         resultVec.add(vectorForButtons);
         return resultVec;
     }
+    int execUpdate(String query) {
+        try {
+            savepoint=connection.setSavepoint();
+            connection.setAutoCommit(false);
+            int result= statement.executeUpdate(query);
+            connection.commit();
+            return result;
+        } catch (SQLException exc) {
+            try {
+                connection.rollback(savepoint);
+            }catch (SQLException rollbackExc){
+                return SQL_EXCEPTION;
+            }
+            return SQL_EXCEPTION;
+        }
+    }
+    int saveToDB(String name,Vector<HashMap<HashMap<String,String>,String>> deviceAndDelayAndRelativeDeviceVector){
+        String query="CREATE TABLE `ка`.`"+name+"` (\n" +
+                "  `id` INT NOT NULL AUTO_INCREMENT,\n" +
+                "  `подсистема` VARCHAR(45) NULL,\n" +
+                "  `устройство` VARCHAR(45) NULL,\n" +
+                "  `режим` VARCHAR(45) NULL,\n" +
+                "  `задержка` VARCHAR(45) NULL,\n" +
+                "  `отношение` VARCHAR(45) NULL,\n" +
+                "  PRIMARY KEY (`id`),\n" +
+                "  UNIQUE INDEX `idname_UNIQUE` (`id` ASC))\n" +
+                "ENGINE = InnoDB\n" +
+                "DEFAULT CHARACTER SET = utf8;\n";
+        int result=execUpdate(query);
 
+        int verRes=verifyResult(result);
+        if(verRes==CLASS_NOT_FOUND) {
+            return CLASS_NOT_FOUND;
+        }
+        if(verRes==SQL_EXCEPTION) {
+            return SQL_EXCEPTION;
+        }
+        if(verRes==CLASS_CAST_EXCEPTION) {
+            return CLASS_CAST_EXCEPTION;
+        }
+        int index=1;
+        for(HashMap<HashMap<String,String>,String> temp:deviceAndDelayAndRelativeDeviceVector){
+            Set<?> firstKeySet = temp.keySet();
+            String setResult = firstKeySet.toString();
+            setResult = setResult.replaceAll("[^а-яА-Я_0-9&&[^a-zA-Z_0-9]&&[^=]&&[^,]&&[^\t]&&[^.]&&[^ \\t\\n\\x0B\\f\\r]&&[^/]]", "");
+            String[] maps = setResult.split(",");
+            String firstValues="";
+            for (String str : maps) {
+                HashMap<String, String> tempMap = new HashMap<>();
+                if (str.endsWith("=")) {
+                    firstValues="";
+                } else {
+                    String[] forTempMap = str.split("=");
+                    forTempMap[0]=forTempMap[0].trim();
+                    tempMap.put(forTempMap[0], forTempMap[1]);
+                    String res = temp.get(tempMap);
+                    firstValues=res;
+                }
+            }
+            String[] info=maps[0].split("=");
+            String[] deviceInfo=info[0].split(" ");
+            String delay;
+            if(maps[0].endsWith("=")){
+                delay="";
+            }
+            else{
+                delay=info[1];
+            }
+            String insertQuery="INSERT INTO `ка`.`"+name+"` (`подсистема`,`устройство`,`режим`,`задержка`,`отношение`)\n"+
+                    "VALUES('"+deviceInfo[0]+"','"+deviceInfo[1]+"','"+deviceInfo[2]+"','"+delay+"','"+firstValues+"');";
+            result=execUpdate(insertQuery);
+            verRes=verifyResult(result);
+            if(verRes==CLASS_NOT_FOUND) {
+                return CLASS_NOT_FOUND;
+            }
+            if(verRes==SQL_EXCEPTION) {
+                return SQL_EXCEPTION;
+            }
+            if(verRes==CLASS_CAST_EXCEPTION) {
+                return CLASS_CAST_EXCEPTION;
+            }
+
+        }
+        return OK;
+    }
 }

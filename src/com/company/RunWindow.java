@@ -10,7 +10,7 @@ import static com.company.MainWindow.*;
 
 
 public class RunWindow implements WindowListener{
-    //private HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
+    private HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
     private HashMap<String,String[]> finalDelay=new HashMap<>();
     private JTextArea executingArea;
     JPanel main;
@@ -30,9 +30,9 @@ public class RunWindow implements WindowListener{
         runWindowFrame.setContentPane(main);
         runWindowFrame.pack();
         runWindowFrame.setVisible(true);
-        if (deviceAndDelayAndRelativeDeviceOpenedVector.size() != 0) {
-            for (int i = 0; i < MainWindow.deviceAndDelayAndRelativeDeviceOpenedVector.size(); ++i) {
-                deviceAndDelayAndRelativeDevice = deviceAndDelayAndRelativeDeviceOpenedVector.get(i);
+        if (deviceAndDelayAndRelativeDeviceVector.size() != 0) {
+            for (int i = 0; i < MainWindow.deviceAndDelayAndRelativeDeviceVector.size(); ++i) {
+                deviceAndDelayAndRelativeDevice = deviceAndDelayAndRelativeDeviceVector.get(i);
                 makeWindow();
             }
         }
