@@ -5,9 +5,17 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static com.company.MainWindow.deviceAndDelayAndRelativeDeviceVector;
 import static com.company.MainWindow.mainFrame;
+import static java.nio.file.StandardOpenOption.APPEND;
 
 /**
  * Created by Игорь on 03.08.2017.
@@ -21,8 +29,10 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
     static JTextArea log=new JTextArea(30,80);
     static JFrame algorithmMakerFrame;
     private JPanel main,buttonPanel;
-    private DB DBConnection;
+    static DB DBConnection;
     static String chosenDeviceAndMode="";
+    static Path used_namesPath= Paths.get("C:\\Users\\igord\\IdeaProjects\\Prototype v0.2\\src\\com\\company\\used_names.txt");
+    static Charset charset=Charset.forName("UTF-8");
     //static HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
     private AlgorithmMaker(){
         DBConnection=new DB();
@@ -84,6 +94,7 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
             JFrame saveFrame=new JFrame("Сохранение");
             saveFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
             saveFrame.setContentPane(mainPanel);
+            saveFrame.setLocationRelativeTo(algorithmMakerFrame);
             saveFrame.pack();
             saveFrame.setVisible(true);
             confirmSaveButton.addActionListener(new ActionListener() {
@@ -91,15 +102,53 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
                 public void actionPerformed(ActionEvent e) {
                     String name=nameField.getText();
                     if(name.length()>0){
-                        int res=DBConnection.saveToDB(name,deviceAndDelayAndRelativeDeviceVector);
-                        saveFrame.dispose();
+                        if(compareName(name)) {
+                            int res = DBConnection.saveToDB(name, deviceAndDelayAndRelativeDeviceVector);
+                            if (res == DB.CLASS_NOT_FOUND) {
+                                JOptionPane.showMessageDialog(algorithmMakerFrame, "ClassNotFound exception", "ClassNotFound", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+                            if (res == DB.SQL_EXCEPTION) {
+                                JOptionPane.showMessageDialog(algorithmMakerFrame, "SQLException", "SQLException", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+                            if (res == DB.CLASS_CAST_EXCEPTION) {
+                                JOptionPane.showMessageDialog(algorithmMakerFrame, "ClassCastException", "ClassCastException", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+                            writeName(name);
+                            saveFrame.dispose();
+                            log.setText("");
+                            deviceAndDelayAndRelativeDeviceVector.clear();
+                        }
+                        else{
+                            JOptionPane.showMessageDialog(algorithmMakerFrame,"Выберите другое имя","Выберите другое имя",JOptionPane.ERROR_MESSAGE);
+                        }
+
                     }
                 }
             });
         }
     }
 
-
+    private void writeName(String name){
+        try(BufferedWriter bufferedWriter= Files.newBufferedWriter(used_namesPath,charset,APPEND)){
+            bufferedWriter.write(name+"/");
+        }catch(IOException ex){}
+    }
+    private boolean compareName(String name){
+        String line;
+        try(BufferedReader bufferedReader= Files.newBufferedReader(used_namesPath,charset)){
+            while((line=bufferedReader.readLine())!=null){
+                String[] usedNames=line.split("/");
+                for(String str:usedNames){
+                    if(str.equals(name))
+                        return false;
+                }
+            }
+        }catch(IOException ex){}
+        return true;
+    }
     private void createRunButton(){
         runButton=new JButton ("Запустить");
         buttonPanel.add(runButton);

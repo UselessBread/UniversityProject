@@ -244,7 +244,6 @@ public class DB {
         if(verRes==CLASS_CAST_EXCEPTION) {
             return CLASS_CAST_EXCEPTION;
         }
-        int index=1;
         for(HashMap<HashMap<String,String>,String> temp:deviceAndDelayAndRelativeDeviceVector){
             Set<?> firstKeySet = temp.keySet();
             String setResult = firstKeySet.toString();
@@ -288,5 +287,38 @@ public class DB {
 
         }
         return OK;
+    }
+    Object openQuery(String name){
+        HashMap<String,String> firstPart=new HashMap<>();
+        HashMap< HashMap<String,String>,String> secondPart=new HashMap<>();
+        Vector<HashMap< HashMap<String,String>,String>> returnVal=new Vector<>();
+        String query="SELECT * FROM `ка`.`"+name+"`;";
+        Object resultObject=execQuery(query);
+        if (verifyResult(resultObject)==OK) {
+            ResultSet resultSet = (ResultSet) resultObject;
+            try{
+                while (resultSet.next()){
+                    String deviceName=resultSet.getString("подсистема")+" "+resultSet.getString("устройство")+" "+
+                            resultSet.getString("режим");
+                    String delay=resultSet.getString("задержка");
+                    String relation=resultSet.getString("отношение");
+                    if (relation.length()==0)
+                        relation="";
+                    firstPart.putIfAbsent(deviceName,delay);
+                    secondPart.putIfAbsent(firstPart,relation);
+                    returnVal.add(secondPart);
+                }
+            }catch(SQLException e){}
+        }
+        else if(verifyResult(resultObject)==CLASS_NOT_FOUND){
+            return CLASS_NOT_FOUND;
+        }
+        else if(verifyResult(resultObject)==SQL_EXCEPTION){
+            return SQL_EXCEPTION;
+        }
+        else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
+            return CLASS_CAST_EXCEPTION;
+        }
+        return returnVal;
     }
 }

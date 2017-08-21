@@ -225,7 +225,7 @@ import static com.company.MainWindow.*;
             listFrame.setVisible(true);
         }
     }
-    void verifyResult(Vector<String> stringVector){
+     void verifyResult(Vector<String> stringVector){
         try {
             if (stringVector.size() != 1) {
                 return;

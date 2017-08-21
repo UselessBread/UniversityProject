@@ -14,6 +14,8 @@ public class RunWindow implements WindowListener{
     private HashMap<String,String[]> finalDelay=new HashMap<>();
     private JTextArea executingArea;
     JPanel main;
+    JFrame runWindowFrame;
+    private Vector<HashMap<HashMap<String, String>, String>> t=new Vector<>();
 
 
     public RunWindow() {
@@ -24,7 +26,7 @@ public class RunWindow implements WindowListener{
         main = new JPanel();
         main.setOpaque(true);
         main.add(executingAreaScrollPane);
-        JFrame runWindowFrame = new JFrame("Запуск");
+        runWindowFrame = new JFrame("Запуск");
         runWindowFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         runWindowFrame.addWindowListener(this);
         runWindowFrame.setContentPane(main);
@@ -34,6 +36,16 @@ public class RunWindow implements WindowListener{
             for (int i = 0; i < MainWindow.deviceAndDelayAndRelativeDeviceVector.size(); ++i) {
                 deviceAndDelayAndRelativeDevice = deviceAndDelayAndRelativeDeviceVector.get(i);
                 makeWindow();
+            }
+        }
+        else if(openedDeviceAndDelayAndRelativeDeviceVector.size()>0){
+            deviceAndDelayAndRelativeDeviceVector.clear();
+            for(int i=0;i<openedDeviceAndDelayAndRelativeDeviceVector.size();++i){
+                deviceAndDelayAndRelativeDeviceVector=(openedDeviceAndDelayAndRelativeDeviceVector.get(i));
+                for (int x = 0; x < MainWindow.deviceAndDelayAndRelativeDeviceVector.size(); ++x) {
+                    deviceAndDelayAndRelativeDevice = deviceAndDelayAndRelativeDeviceVector.get(x);
+                    makeWindow();
+                }
             }
         }
         else{
@@ -118,10 +130,6 @@ public class RunWindow implements WindowListener{
             }
         }
 
-
-
-
-
     }
     //Сделать варианты для большого количества часов\минут\секунд(как с миллисекундами)
     private void executeDelay(int calendarConstant,int timeValue,String[] temp) {
@@ -178,6 +186,7 @@ public class RunWindow implements WindowListener{
 
     @Override
     public void windowClosing(WindowEvent e) {
+        runWindowFrame.dispose();
         algorithmMakerFrame.setEnabled(true);
         algorithmMakerFrame.setVisible(true);
     }
