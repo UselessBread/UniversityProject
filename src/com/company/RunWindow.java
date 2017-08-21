@@ -10,8 +10,6 @@ import static com.company.MainWindow.*;
 
 
 public class RunWindow implements WindowListener{
-    private HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
-    private HashMap<String,String[]> finalDelay=new HashMap<>();
     private JTextArea executingArea;
     JPanel main;
     JFrame runWindowFrame;
@@ -19,9 +17,9 @@ public class RunWindow implements WindowListener{
 
 
     public RunWindow() {
-        //algorithmMakerFrame.setEnabled(false);
         executingArea = new JTextArea(30, 80);
         executingArea.setEditable(false);
+        executingArea.append("");
         JScrollPane executingAreaScrollPane = new JScrollPane(executingArea);
         main = new JPanel();
         main.setOpaque(true);
@@ -32,107 +30,29 @@ public class RunWindow implements WindowListener{
         runWindowFrame.setContentPane(main);
         runWindowFrame.pack();
         runWindowFrame.setVisible(true);
-        if (deviceAndDelayAndRelativeDeviceVector.size() != 0) {
-            for (int i = 0; i < MainWindow.deviceAndDelayAndRelativeDeviceVector.size(); ++i) {
-                deviceAndDelayAndRelativeDevice = deviceAndDelayAndRelativeDeviceVector.get(i);
-                makeWindow();
-            }
-        }
-        else if(openedDeviceAndDelayAndRelativeDeviceVector.size()>0){
-            deviceAndDelayAndRelativeDeviceVector.clear();
-            for(int i=0;i<openedDeviceAndDelayAndRelativeDeviceVector.size();++i){
-                deviceAndDelayAndRelativeDeviceVector=(openedDeviceAndDelayAndRelativeDeviceVector.get(i));
-                for (int x = 0; x < MainWindow.deviceAndDelayAndRelativeDeviceVector.size(); ++x) {
-                    deviceAndDelayAndRelativeDevice = deviceAndDelayAndRelativeDeviceVector.get(x);
-                    makeWindow();
-                }
-            }
-        }
-        else{
-            makeWindow();
-        }
+
+       makeWindow();
     }
     private void makeWindow() {
-        Set<?> firstKeySet = deviceAndDelayAndRelativeDevice.keySet();
-        String setResult = firstKeySet.toString();
-        setResult = setResult.replaceAll("[^а-яА-Я_0-9&&[^a-zA-Z_0-9]&&[^=]&&[^,]&&[^\t]&&[^.]&&[^ \\t\\n\\x0B\\f\\r]&&[^/]]", "");
-        String[] mapsTemp = setResult.split(",");
-        int length = mapsTemp.length;
-        int mapsLength = 0;
-        String[] maps = new String[length];
-        for (String str : mapsTemp) {
-            maps[mapsLength] = mapsTemp[length - 1];
-            mapsLength++;
-            length--;
-        }
-        ArrayList<String> firstValues = new ArrayList<>();
-        ArrayList<Integer> noDelayIndexes = new ArrayList<>();
-        for (String str : maps) {
-            HashMap<String, String> tempMap = new HashMap<>();
-            if (str.endsWith("=")) {
-                firstValues.add("NoDelay");
-            } else {
-                String[] forTempMap = str.split("=");
-                forTempMap[0]=forTempMap[0].trim();
-                tempMap.put(forTempMap[0], forTempMap[1]);
-                String res = deviceAndDelayAndRelativeDevice.get(tempMap);
-                firstValues.add(res);
+        for(SystemInfo systemInfo:systemInfoVector){
+            if(systemInfo.getDelay().length()==0){
+                executingArea.append(systemInfo.getInfoWithoutDelay()+"\n");
             }
-        }
-        //reverse(firstValues);
-        for (int i = 0; i < firstValues.size(); ++i) {
-            String[] temp = maps[i].split("=");
-            String[] deviceNameSplit=temp[0].split(" ");
-            String deviceName=deviceNameSplit[1];
-            if(maps[i].endsWith("=")){
-                String[] delay={"0"};
-                finalDelay.put(deviceName,delay);
-                executingArea.append(temp[0]+"\n");
+            if(systemInfo.getDelay().length()>0&&systemInfo.getRelation().length()>0){
+                String[] delay=systemInfo.getDelay().split("/");
+                int time=convertToMilliseconds(delay);
+                executeDelay(Calendar.MILLISECOND,time,systemInfo.getInfoWithRelation());
             }
-            else {
-                String[] delay = temp[1].split("/");
-                String firstValuesResult = firstValues.get(i);
-                finalDelay.put(deviceName, delay);
-                if (firstValuesResult.equals(" ")) {
-                    int timeValue = Integer.parseInt(delay[0]);
-                    if (delay[1].equals("Часы")) {
-                        executeDelay(Calendar.HOUR, timeValue, temp);
-                    }
-                    if (delay[1].equals("Минуты")) {
-                        executeDelay(Calendar.MINUTE, timeValue, temp);
-                    }
-                    if (delay[1].equals("Секунды")) {
-                        executeDelay(Calendar.SECOND, timeValue, temp);
-                    }
-                    if (delay[1].equals("Миллисекунды")) {
-                        executeDelay(Calendar.MILLISECOND, timeValue, temp);
-                    }
-                } /*else if (firstValuesResult.equals("NoDelay")) {
-                    executingArea.append(temp[0]);
-                }*/ else if(!firstValuesResult.equals(" ")&&!firstValuesResult.equals("NoDelay")) {
-                    String device = firstValuesResult;
-                    String[] relationDevicesDelay = finalDelay.get(device);
-                    if(relationDevicesDelay[0].equals("0")){
-                        int intDelay = convertToMilliseconds(delay);
-                        executeDelay(Calendar.MILLISECOND, intDelay, temp);
-                    }
-                    else {
-                        int intDelay = convertToMilliseconds(delay);
-                        //int intRelationDelay = convertToMilliseconds(relationDevicesDelay);
-                        //int thisDeviceDelay = intDelay + intRelationDelay;
-                        String[] newValue = new String[2];
-                        newValue[0] = Integer.toString(intDelay);//this device delay if you want to place summary
-                        newValue[1] = "Миллисекунды";
-                        finalDelay.replace(deviceName, delay, newValue);
-                        executeDelay(Calendar.MILLISECOND, intDelay, temp);
-                    }
-                }
+            if(systemInfo.getDelay().length()>0&&systemInfo.getRelation().length()==0){
+                String delay[]=systemInfo.getDelay().split("/");
+                int time=convertToMilliseconds(delay);
+                executeDelay(Calendar.MILLISECOND,time,systemInfo.getInfoWithoutRelation()+" ");
             }
         }
 
     }
     //Сделать варианты для большого количества часов\минут\секунд(как с миллисекундами)
-    private void executeDelay(int calendarConstant,int timeValue,String[] temp) {
+    private void executeDelay(int calendarConstant,int timeValue,String deviceInfo) {
         boolean done = false;
         Calendar calendar = Calendar.getInstance();
         int time = calendar.get(calendarConstant) + timeValue;
@@ -142,13 +62,13 @@ public class RunWindow implements WindowListener{
             while (calendar.get(Calendar.HOUR) * 3600000 + calendar.get(Calendar.MINUTE) * 60000 + calendar.get(Calendar.SECOND) * 1000 + calendar.get(Calendar.MILLISECOND) < goalTime) {
                 calendar = Calendar.getInstance();
             }
-            executingArea.append(temp[0]+"\n");
+            executingArea.append(deviceInfo+"\n");
         }
         else{
                 while (!done) {
                     calendar = Calendar.getInstance();
                     if (calendar.get(calendarConstant) >= time) {
-                        executingArea.append(temp[0]+"\n");
+                        executingArea.append(deviceInfo+"\n");
                         done = true;
                     }
                 }
@@ -169,15 +89,6 @@ public class RunWindow implements WindowListener{
             return delayVal=delayVal*1000;
         }
             return delayVal;
-    }
-    private void reverse(ArrayList<String> reverseList){
-        ArrayList<String> temp=new ArrayList<>(reverseList);
-        int size=reverseList.size();
-        reverseList.clear();
-        for(int i=0;i<temp.size();++i){
-            reverseList.add(temp.get(size-1));
-            size--;
-        }
     }
     @Override
     public void windowOpened(WindowEvent e) {

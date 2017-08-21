@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.Vector;
 
+import static com.company.MainWindow.systemInfoVector;
+
 public class DB {
     static  final int CLASS_NOT_FOUND=-11;
     static  final int SQL_EXCEPTION=-12;
@@ -220,7 +222,7 @@ public class DB {
             return SQL_EXCEPTION;
         }
     }
-    int saveToDB(String name,Vector<HashMap<HashMap<String,String>,String>> deviceAndDelayAndRelativeDeviceVector){
+    int saveToDB(String name,Vector<SystemInfo> systemInfoVector){
         String query="CREATE TABLE `ка`.`"+name+"` (\n" +
                 "  `id` INT NOT NULL AUTO_INCREMENT,\n" +
                 "  `подсистема` VARCHAR(45) NULL,\n" +
@@ -244,35 +246,10 @@ public class DB {
         if(verRes==CLASS_CAST_EXCEPTION) {
             return CLASS_CAST_EXCEPTION;
         }
-        for(HashMap<HashMap<String,String>,String> temp:deviceAndDelayAndRelativeDeviceVector){
-            Set<?> firstKeySet = temp.keySet();
-            String setResult = firstKeySet.toString();
-            setResult = setResult.replaceAll("[^а-яА-Я_0-9&&[^a-zA-Z_0-9]&&[^=]&&[^,]&&[^\t]&&[^.]&&[^ \\t\\n\\x0B\\f\\r]&&[^/]]", "");
-            String[] maps = setResult.split(",");
-            String firstValues="";
-            for (String str : maps) {
-                HashMap<String, String> tempMap = new HashMap<>();
-                if (str.endsWith("=")) {
-                    firstValues="";
-                } else {
-                    String[] forTempMap = str.split("=");
-                    forTempMap[0]=forTempMap[0].trim();
-                    tempMap.put(forTempMap[0], forTempMap[1]);
-                    String res = temp.get(tempMap);
-                    firstValues=res;
-                }
-            }
-            String[] info=maps[0].split("=");
-            String[] deviceInfo=info[0].split(" ");
-            String delay;
-            if(maps[0].endsWith("=")){
-                delay="";
-            }
-            else{
-                delay=info[1];
-            }
+        for(SystemInfo systemInfo:systemInfoVector){
+
             String insertQuery="INSERT INTO `ка`.`"+name+"` (`подсистема`,`устройство`,`режим`,`задержка`,`отношение`)\n"+
-                    "VALUES('"+deviceInfo[0]+"','"+deviceInfo[1]+"','"+deviceInfo[2]+"','"+delay+"','"+firstValues+"');";
+                    "VALUES('"+systemInfo.getSubsystem()+"','"+systemInfo.getDeviceName()+"','"+systemInfo.getMode()+"','"+systemInfo.getDelay()+"','"+systemInfo.getRelation()+"');";
             result=execUpdate(insertQuery);
             verRes=verifyResult(result);
             if(verRes==CLASS_NOT_FOUND) {
@@ -289,24 +266,21 @@ public class DB {
         return OK;
     }
     Object openQuery(String name){
-        HashMap<String,String> firstPart=new HashMap<>();
-        HashMap< HashMap<String,String>,String> secondPart=new HashMap<>();
-        Vector<HashMap< HashMap<String,String>,String>> returnVal=new Vector<>();
         String query="SELECT * FROM `ка`.`"+name+"`;";
         Object resultObject=execQuery(query);
         if (verifyResult(resultObject)==OK) {
             ResultSet resultSet = (ResultSet) resultObject;
             try{
                 while (resultSet.next()){
-                    String deviceName=resultSet.getString("подсистема")+" "+resultSet.getString("устройство")+" "+
-                            resultSet.getString("режим");
+                    String subsystem=resultSet.getString("подсистема")+" ";
+                    String deviceName=resultSet.getString("устройство")+" ";
+                    String mode=resultSet.getString("режим");
                     String delay=resultSet.getString("задержка");
                     String relation=resultSet.getString("отношение");
                     if (relation.length()==0)
                         relation="";
-                    firstPart.putIfAbsent(deviceName,delay);
-                    secondPart.putIfAbsent(firstPart,relation);
-                    returnVal.add(secondPart);
+                    SystemInfo systemInfo=new SystemInfo(subsystem,deviceName,mode,delay,relation);
+                    systemInfoVector.add(systemInfo);
                 }
             }catch(SQLException e){}
         }
@@ -319,6 +293,6 @@ public class DB {
         else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
             return CLASS_CAST_EXCEPTION;
         }
-        return returnVal;
+        return systemInfoVector;
     }
 }

@@ -13,8 +13,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static com.company.MainWindow.deviceAndDelayAndRelativeDeviceVector;
+//import static com.company.MainWindow.deviceAndDelayAndRelativeDeviceVector;
 import static com.company.MainWindow.mainFrame;
+import static com.company.MainWindow.systemInfoVector;
 import static java.nio.file.StandardOpenOption.APPEND;
 
 /**
@@ -24,16 +25,13 @@ import static java.nio.file.StandardOpenOption.APPEND;
 public class AlgorithmMaker extends JPanel implements ActionListener{
     static final String NEW_ALGORITHM="Create new algorithm";
     static final String SAVE_BUTTON ="Save button pressed";
-    //static final String AFTER_ALGORITHM_STARTS="After beginning";//in queueChooser
     private JButton runButton;
     static JTextArea log=new JTextArea(30,80);
     static JFrame algorithmMakerFrame;
     private JPanel main,buttonPanel;
     static DB DBConnection;
-    static String chosenDeviceAndMode="";
     static Path used_namesPath= Paths.get("C:\\Users\\igord\\IdeaProjects\\Prototype v0.2\\src\\com\\company\\used_names.txt");
     static Charset charset=Charset.forName("UTF-8");
-    //static HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
     private AlgorithmMaker(){
         DBConnection=new DB();
         int state=DBConnection.state;
@@ -103,7 +101,7 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
                     String name=nameField.getText();
                     if(name.length()>0){
                         if(compareName(name)) {
-                            int res = DBConnection.saveToDB(name, deviceAndDelayAndRelativeDeviceVector);
+                            int res = DBConnection.saveToDB(name,systemInfoVector );
                             if (res == DB.CLASS_NOT_FOUND) {
                                 JOptionPane.showMessageDialog(algorithmMakerFrame, "ClassNotFound exception", "ClassNotFound", JOptionPane.ERROR_MESSAGE);
                                 return;
@@ -119,7 +117,7 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
                             writeName(name);
                             saveFrame.dispose();
                             log.setText("");
-                            deviceAndDelayAndRelativeDeviceVector.clear();
+                            systemInfoVector.clear();
                         }
                         else{
                             JOptionPane.showMessageDialog(algorithmMakerFrame,"Выберите другое имя","Выберите другое имя",JOptionPane.ERROR_MESSAGE);

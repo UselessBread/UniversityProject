@@ -3,7 +3,6 @@ package com.company;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.HashMap;
 import java.util.Vector;
 
 import static com.company.AlgorithmMaker.*;
@@ -12,7 +11,6 @@ import static com.company.MainWindow.*;
 
 
  class NewAlgorithmWindow implements WindowListener{
-     private HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
      private JFrame listFrame;
     private JPanel resultButtonPanel=new JPanel();
     private JList<String> resultList;
@@ -21,6 +19,8 @@ import static com.company.MainWindow.*;
     private Vector<String> resultTest;
     private Vector<Vector<String>> historyVector=new Vector<>();
      NewAlgorithmWindow(ActionEvent e, DB db){
+         systemInfoVector.clear();
+         systemInfoVectorVector.clear();
          this.e=e;
          DBConnection=db;
          algorithmMakerFrame.setVisible(false);//disable main frame
@@ -128,16 +128,10 @@ import static com.company.MainWindow.*;
                                 @Override
                                 public void actionPerformed(ActionEvent e) {
                                     String delayFieldResult = delayField.getText();
-                                    boolean test=delayActivator.isSelected();
                                     //Make someone to enter value in delayField
                                     if (((delayField.getText().equals(""))&&!(delayActivator.isSelected()))||!(delayField.getText().equals(""))&&(delayActivator.isSelected())) {
                                     boolean ifDelayChosen = false;
                                     String chosenDeviceMode = e.getActionCommand();
-                                    for (String str : forLogging) {
-                                        chosenDeviceAndMode += str + " ";
-                                    }
-                                    chosenDeviceAndMode += chosenDeviceMode;
-
                                         String delay;
                                         if (delayActivator.isSelected()) {
                                             delay = delayField.getText() + "/" + delayFormatChooser.getSelectedItem(); //Убрал +" " в конце после delayFormatChooser...
@@ -146,15 +140,10 @@ import static com.company.MainWindow.*;
                                             delay = delayFieldResult;
                                             ifDelayChosen = false;
                                         }
-                                        HashMap<String, String> deviceAndDelay = new HashMap<>();
-                                        deviceAndDelay.putIfAbsent(chosenDeviceAndMode, delay);
-                                        /*String queueChooserResult=(String)queueChooser.getSelectedItem();
-                                        if(queueChooserResult.equals(""))
-                                            queueChooserResult=AlgorithmMaker.AFTER_ALGORITHM_STARTS;*/
-                                        deviceAndDelayAndRelativeDevice.putIfAbsent(deviceAndDelay, (String) queueChooser.getSelectedItem());
-                                        deviceAndDelayAndRelativeDeviceVector.add(deviceAndDelayAndRelativeDevice);
-                                        //MainWindow.deviceAndDelayAndRelativeDeviceOpenedVector.add(deviceAndDelayAndRelativeDevice);
+                                        SystemInfo newAction=new SystemInfo(forLogging.get(0),forLogging.get(1),chosenDeviceMode,delay,(String)queueChooser.getSelectedItem());
+                                        systemInfoVector.add(newAction);
                                         String queueSelectedItem = (String) queueChooser.getSelectedItem();
+                                        String chosenDeviceAndMode=forLogging.get(0)+" "+forLogging.get(1)+" "+chosenDeviceMode;
                                         AlgorithmMaker.log.append(chosenDeviceAndMode + " " + delay);
                                         if (ifDelayChosen) {
                                             if (queueSelectedItem.equals(" ")) {

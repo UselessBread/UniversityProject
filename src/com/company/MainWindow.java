@@ -6,14 +6,12 @@ import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Collections;
-import java.util.HashMap;
+
 import java.util.Vector;
 
 public class MainWindow extends JPanel implements ActionListener {
-    //static HashMap<HashMap<String,String>,String> deviceAndDelayAndRelativeDevice=new HashMap<>();
-    static Vector<HashMap<HashMap<String, String>, String>> deviceAndDelayAndRelativeDeviceVector = new Vector<>();
-    static Vector<Vector<HashMap<HashMap<String, String>, String>>> openedDeviceAndDelayAndRelativeDeviceVector=new Vector<>();
+    static Vector<SystemInfo> systemInfoVector=new Vector<>();
+    static Vector<Vector<SystemInfo>> systemInfoVectorVector=new Vector<>();
     private final String NEW_ALGORITHM = "Create new algorithm";
     private final String OPEN = "Open algorithm";
     private DB DBC=new DB();
@@ -60,7 +58,8 @@ public class MainWindow extends JPanel implements ActionListener {
             confirmButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    openedDeviceAndDelayAndRelativeDeviceVector.add((Vector<HashMap<HashMap<String, String>, String>>)DBC.openQuery(usedNames.getSelectedValue()));
+                    //Добавляет напрямую в systemInfoVector
+                    DBC.openQuery(usedNames.getSelectedValue());
                     RunWindow runWindow=new RunWindow();
                 }
             });
