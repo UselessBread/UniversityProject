@@ -1,6 +1,7 @@
 package com.company;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
@@ -21,8 +22,13 @@ public class MainWindow extends JPanel implements ActionListener {
     JTextArea openedAlgorithms=new JTextArea(5,30);
     static JTextArea resourceMonitor=new JTextArea(1,30);
     ArrayList<Double> usedResources=new ArrayList<>();
+    static ArrayList<Double> allResources;
 
     public MainWindow() {
+        ArrayList<Double> resources=DBC.getAllResources();
+        resourceMonitor.append("0/"+resources.get(0)+" 0/"+resources.get(1)+" 0/"+resources.get(2));
+        resourceMonitor.setEditable(false);
+        openedAlgorithms.setEditable(false);
         JButton addButton = new JButton("Новый алгоритм");
         addButton.setActionCommand(NEW_ALGORITHM);
         addButton.addActionListener(this);
@@ -71,7 +77,7 @@ public class MainWindow extends JPanel implements ActionListener {
                 public void actionPerformed(ActionEvent e) {
                     //Добавляет напрямую в systemInfoVector
                     DBC.openQuery(usedNames.getSelectedValue());
-                    ArrayList<Double> resources=DBC.getAllResources();
+                    allResources=DBC.getAllResources();
                     for(SystemInfo systemInfo:systemInfoVector){
                         String[] mode=systemInfo.getMode().split("\t");
                         if(usedResources.size()==0){
@@ -89,9 +95,9 @@ public class MainWindow extends JPanel implements ActionListener {
                             usedResources.add(resource3);
                         }
                     }
-                    resourceMonitor.setText(usedResources.get(0)+"/"+resources.get(0)+"\t"+
-                            usedResources.get(1)+"/"+resources.get(1)+"\t"+
-                            usedResources.get(2)+"/"+resources.get(2));
+                    resourceMonitor.setText(usedResources.get(0)+"/"+allResources.get(0)+"\t"+
+                            usedResources.get(1)+"/"+allResources.get(1)+"\t"+
+                            usedResources.get(2)+"/"+allResources.get(2));
                     openedAlgorithms.append(usedNames.getSelectedValue()+"\n");
                     RunWindow runWindow=new RunWindow();
                 }

@@ -45,6 +45,10 @@ public class SystemInfo {
     String getInfoWithoutDelay(){
         return getSubsystem()+" "+getDeviceName()+" "+getMode();
     }
+    String getInfoWithoutDelayAndMode(){
+        return getSubsystem()+" "+getDeviceName();
+    }
+
     String getAllInfo(){
         return getSubsystem()+" "+getDeviceName()+" "+getMode()+" "+getDelay()+" "+getRelation();
     }
