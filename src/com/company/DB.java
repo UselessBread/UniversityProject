@@ -295,4 +295,34 @@ public class DB {
         }
         return systemInfoVector;
     }
+    ArrayList<Double> getAllResources(){
+        ArrayList<Double> resultList=new ArrayList<>();
+        String query="SELECT * FROM `ка`.`ресурсы`";
+        Object resultObject=execQuery(query);
+        int test=verifyResult(resultObject);
+        if(test==CLASS_NOT_FOUND) {
+             resultList.add((double)CLASS_NOT_FOUND);
+             return resultList;
+        }
+        if(test==SQL_EXCEPTION) {
+             resultList.add((double)SQL_EXCEPTION);
+            return resultList;
+        }
+        if(test==CLASS_CAST_EXCEPTION) {
+             resultList.add((double)CLASS_CAST_EXCEPTION);
+            return resultList;
+        }
+        ResultSet resultSet=(ResultSet)resultObject;
+        try {
+            while (resultSet.next()) {
+                resultList.add(Double.parseDouble(resultSet.getString("ресурс_1")));
+                resultList.add(Double.parseDouble(resultSet.getString("ресурс_2")));
+                resultList.add(Double.parseDouble(resultSet.getString("ресурс_3")));
+            }
+        }catch (SQLException sqlE){
+            resultList.add((double)SQL_EXCEPTION);
+            return resultList;
+        }
+        return resultList;
+    }
 }

@@ -19,7 +19,7 @@ public class RunWindow implements WindowListener{
     public RunWindow() {
         executingArea = new JTextArea(30, 80);
         executingArea.setEditable(false);
-        executingArea.append("");
+        executingArea.setText("");
         JScrollPane executingAreaScrollPane = new JScrollPane(executingArea);
         main = new JPanel();
         main.setOpaque(true);

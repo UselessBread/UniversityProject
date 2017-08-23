@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 
+import java.util.ArrayList;
 import java.util.Vector;
 
 public class MainWindow extends JPanel implements ActionListener {
@@ -17,6 +18,9 @@ public class MainWindow extends JPanel implements ActionListener {
     private DB DBC=new DB();
     static JPanel mainPanel = new JPanel();
     static JFrame mainFrame;
+    JTextArea openedAlgorithms=new JTextArea(5,30);
+    static JTextArea resourceMonitor=new JTextArea(1,30);
+    ArrayList<Double> usedResources=new ArrayList<>();
 
     public MainWindow() {
         JButton addButton = new JButton("Новый алгоритм");
@@ -29,7 +33,13 @@ public class MainWindow extends JPanel implements ActionListener {
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(addButton);
         buttonPanel.add(openButton);
-        mainPanel.add(buttonPanel);
+        JSplitPane splitPane=new JSplitPane();
+        splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
+        splitPane.setTopComponent(buttonPanel);
+        JScrollPane openedScrollPane=new JScrollPane(openedAlgorithms);
+        splitPane.setBottomComponent(openedScrollPane);
+        JSplitPane withMonitor=new JSplitPane(JSplitPane.VERTICAL_SPLIT,splitPane,resourceMonitor);
+        mainPanel.add(withMonitor);
 
         add(mainPanel);
     }
@@ -47,6 +57,7 @@ public class MainWindow extends JPanel implements ActionListener {
     }
 
     @Override
+    //Сдежать отслеживание русурсов по изменнению режимов во времени
     public void actionPerformed(ActionEvent e) {
         if (e.getActionCommand().equals(NEW_ALGORITHM)) {
             AlgorithmMaker.createWindow();
@@ -60,6 +71,28 @@ public class MainWindow extends JPanel implements ActionListener {
                 public void actionPerformed(ActionEvent e) {
                     //Добавляет напрямую в systemInfoVector
                     DBC.openQuery(usedNames.getSelectedValue());
+                    ArrayList<Double> resources=DBC.getAllResources();
+                    for(SystemInfo systemInfo:systemInfoVector){
+                        String[] mode=systemInfo.getMode().split("\t");
+                        if(usedResources.size()==0){
+                            usedResources.add(Double.parseDouble(mode[1]));
+                            usedResources.add(Double.parseDouble(mode[2]));
+                            usedResources.add(Double.parseDouble(mode[3]));
+                        }
+                        else {
+                            double resource1=usedResources.get(0)+Double.parseDouble(mode[1]);
+                            double resource2=usedResources.get(1)+Double.parseDouble(mode[2]);
+                            double resource3=usedResources.get(2)+Double.parseDouble(mode[3]);
+                            usedResources.clear();
+                            usedResources.add(resource1);
+                            usedResources.add(resource2);
+                            usedResources.add(resource3);
+                        }
+                    }
+                    resourceMonitor.setText(usedResources.get(0)+"/"+resources.get(0)+"\t"+
+                            usedResources.get(1)+"/"+resources.get(1)+"\t"+
+                            usedResources.get(2)+"/"+resources.get(2));
+                    openedAlgorithms.append(usedNames.getSelectedValue()+"\n");
                     RunWindow runWindow=new RunWindow();
                 }
             });
