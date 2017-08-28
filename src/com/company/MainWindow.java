@@ -1,7 +1,6 @@
 package com.company;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
@@ -78,28 +77,13 @@ public class MainWindow extends JPanel implements ActionListener {
                     //Добавляет напрямую в systemInfoVector
                     DBC.openQuery(usedNames.getSelectedValue());
                     allResources=DBC.getAllResources();
-                    for(SystemInfo systemInfo:systemInfoVector){
-                        String[] mode=systemInfo.getMode().split("\t");
-                        if(usedResources.size()==0){
-                            usedResources.add(Double.parseDouble(mode[1]));
-                            usedResources.add(Double.parseDouble(mode[2]));
-                            usedResources.add(Double.parseDouble(mode[3]));
-                        }
-                        else {
-                            double resource1=usedResources.get(0)+Double.parseDouble(mode[1]);
-                            double resource2=usedResources.get(1)+Double.parseDouble(mode[2]);
-                            double resource3=usedResources.get(2)+Double.parseDouble(mode[3]);
-                            usedResources.clear();
-                            usedResources.add(resource1);
-                            usedResources.add(resource2);
-                            usedResources.add(resource3);
-                        }
-                    }
-                    resourceMonitor.setText(usedResources.get(0)+"/"+allResources.get(0)+"\t"+
-                            usedResources.get(1)+"/"+allResources.get(1)+"\t"+
-                            usedResources.get(2)+"/"+allResources.get(2));
+                    resourceMonitor.setText(0+"/"+allResources.get(0)+"\t"+
+                            0+"/"+allResources.get(1)+"\t"+
+                            0+"/"+allResources.get(2));
                     openedAlgorithms.append(usedNames.getSelectedValue()+"\n");
-                    RunWindow runWindow=new RunWindow();
+                    //RunWindow runWindow=new RunWindow();
+                    //(new RunWindow()).start();
+                    (new ThreadRunWindow()).start();
                 }
             });
 

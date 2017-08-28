@@ -12,6 +12,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 
 //import static com.company.MainWindow.deviceAndDelayAndRelativeDeviceVector;
 import static com.company.MainWindow.mainFrame;
@@ -25,6 +26,8 @@ import static java.nio.file.StandardOpenOption.APPEND;
 public class AlgorithmMaker extends JPanel implements ActionListener{
     static final String NEW_ALGORITHM="Create new algorithm";
     static final String SAVE_BUTTON ="Save button pressed";
+    static ArrayList<String> usedModes=new ArrayList<>();
+
     private JButton runButton;
     static JTextArea log=new JTextArea(30,80);
     static JFrame algorithmMakerFrame;

@@ -3,6 +3,7 @@ package com.company;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayList;
 import java.util.Vector;
 
 import static com.company.AlgorithmMaker.*;
@@ -12,12 +13,14 @@ import static com.company.MainWindow.*;
 
  class NewAlgorithmWindow implements WindowListener{
      private JFrame listFrame;
-    private JPanel resultButtonPanel=new JPanel();
-    private JList<String> resultList;
-    private ActionEvent e;
-    private DB DBConnection;
-    private Vector<String> resultTest;
-    private Vector<Vector<String>> historyVector=new Vector<>();
+     private JPanel resultButtonPanel=new JPanel();
+     private JList<String> resultList;
+     private ActionEvent e;
+     private DB DBConnection;
+     private Vector<String> resultTest;
+     private Vector<Vector<String>> historyVector=new Vector<>();
+     String toUsedModes,forTest;
+
      NewAlgorithmWindow(ActionEvent e, DB db){
          systemInfoVector.clear();
          systemInfoVectorVector.clear();
@@ -67,7 +70,7 @@ import static com.company.MainWindow.*;
                     else if (resultValue.contains("прибор") || resultValue.contains("датчик")) {
                         String prevQueryResult = resultList.getSelectedValue();
                         Vector<Vector<String>> stringVectors = DBConnection.queryToDeviceOrSensor(prevQueryResult);
-                        Vector<String> listVector = new Vector<>(stringVectors.get(0));
+                        Vector<String> listVector = new Vector<>(stringVectors.get(0));//Вектор с названиями столбцов
                         Vector<String> buttonVector = new Vector<>(stringVectors.get(1));
                         verifyResult(buttonVector);
                         forLogging.add(resultValue);
@@ -118,12 +121,13 @@ import static com.company.MainWindow.*;
                         delayPanel.add(delayFormatChooser);
                         delayPanel.add(queueChooser);
                         listPanel.add(delayPanel);
+                        ArrayList<JButton> currentButtons=new ArrayList<>();
 
-
-                        //resultList.setListData(listVector);
                         for (String str : buttonVector) {
                             JButton tempButton = new JButton(str);
                             tempButton.setActionCommand(str);
+                            if(str.split("\t")[0].equals("ВЫКЛ"))
+                                tempButton.setEnabled(false);
                             tempButton.addActionListener(new ActionListener() {
                                 @Override
                                 public void actionPerformed(ActionEvent e) {
@@ -145,6 +149,9 @@ import static com.company.MainWindow.*;
                                         String queueSelectedItem = (String) queueChooser.getSelectedItem();
                                         String chosenDeviceAndMode=forLogging.get(0)+" "+forLogging.get(1)+" "+chosenDeviceMode;
                                         AlgorithmMaker.log.append(chosenDeviceAndMode + " " + delay);
+                                        toUsedModes=chosenDeviceAndMode;
+                                        //Если появляется друная команда, для занесенного устройства, удалить сьарую, добавить новую
+                                        addToUsedModes(forLogging);
                                         if (ifDelayChosen) {
                                             if (queueSelectedItem.equals(" ")) {
                                                 AlgorithmMaker.log.append("После стара алгоритма\n");
@@ -163,10 +170,13 @@ import static com.company.MainWindow.*;
                                     }
                                 }
                             });
+                            currentButtons.add(tempButton);
                             resultButtonPanel.add(tempButton);
 
                         }
+                        buttonTest(currentButtons,forLogging);
                         listPanel.add(resultButtonPanel);
+
 
                     }
                 }
@@ -240,7 +250,94 @@ import static com.company.MainWindow.*;
         }
 
     }
+    private void buttonTest(ArrayList<JButton> buttonList,Vector<String> forLogging) {
+        if (usedModes.size() == 0) {
+            for (JButton button : buttonList) {
+                String command = button.getActionCommand();
+                String[] splittedCommand = command.split("\t");
+                if (splittedCommand[0].equals("ВКЛ")) {
+                    button.setEnabled(true);
+                }
+                if (splittedCommand[0].equals("ВЫКЛ")) {
+                    button.setEnabled(false);
+                }
+            }
+        } else {
+            for (String usedMode : usedModes) {
+                String[] splitedMode = usedMode.split(" ");
+                if ((splitedMode[0] + " " + splitedMode[1]).equals(forLogging.get(0) + " " + forLogging.get(1))) {
 
+                    String usedCommand = splitedMode[2];
+                    String usedCommandName=usedCommand.split("\t")[0];
+                    if (usedCommandName.equals("ВКЛ")) {
+                        for (JButton button : buttonList) {
+                            String buttonCmd = button.getActionCommand();
+                            String[] splittedButtonCmd = buttonCmd.split("\t");
+                            if (splittedButtonCmd[0].equals("ВКЛ"))
+                                button.setEnabled(false);
+                            if (splittedButtonCmd[0].equals("ВЫКЛ"))
+                                button.setEnabled(true);
+                        }
+                        return;
+                    } else if (usedCommandName.equals("ВЫКЛ")) {
+                        for (JButton button : buttonList) {
+                            String buttonCmd = button.getActionCommand();
+                            String[] splittedButtonCmd = buttonCmd.split("\t");
+                            if (splittedButtonCmd[0].equals("ВКЛ"))
+                                button.setEnabled(true);
+                            if (splittedButtonCmd[0].equals("ВЫКЛ"))
+                                button.setEnabled(false);
+                        }
+                        return;
+                    } else {
+                        for (JButton button : buttonList) {
+                            String buttonCmd = button.getActionCommand();
+                            String[] splittedButtonCmd = buttonCmd.split("\t");
+                            if(usedCommand.equals(buttonCmd))
+                                button.setEnabled(false);
+                        }
+                    }
+                } else {
+                    for (JButton button : buttonList) {
+                        String command = button.getActionCommand();
+                        String[] splittedCommand = command.split("\t");
+                        if (splittedCommand[0].equals("ВКЛ")) {
+                            button.setEnabled(true);
+                        }
+                        if (splittedCommand[0].equals("ВЫКЛ")) {
+                            button.setEnabled(false);
+                        }
+                    }
+                }
+            }
+        }
+    }
+     private void addToUsedModes(Vector<String>forLogging){
+         int i=0;
+         if(usedModes.size()==0)
+             usedModes.add(toUsedModes);
+         else {
+             for (String str : usedModes) {
+                 String[] splittedStr = str.split(" ");
+                 String test = splittedStr[0] + " " + splittedStr[1];
+                 if (test.equals(forLogging.get(0) + " " + forLogging.get(1)) && !splittedStr[2].split("\t")[0].equals("ВКЛ") &&
+                         !splittedStr[2].split("\t")[0].equals("ВЫКЛ")) {
+                     usedModes.remove(i);
+                     usedModes.add(toUsedModes);
+                     break;
+                 }
+                 if (test.equals(forLogging.get(0) + " " + forLogging.get(1)) && splittedStr[2].split("\t")[0].equals("ВКЛ") ||
+                         splittedStr[2].split("\t")[0].equals("ВЫКЛ")) {
+                     String toUsedCmdName = toUsedModes.split(" ")[2].split("\t")[0];
+                     if (toUsedCmdName.equals("ВКЛ") || toUsedCmdName.equals("ВЫКЛ")) {
+                         usedModes.remove(i);
+                         usedModes.add(toUsedModes);
+                     }
+                 }
+                 i++;
+             }
+         }
+     }
      @Override
      public void windowOpened(WindowEvent e) {
 

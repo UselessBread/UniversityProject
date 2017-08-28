@@ -7,9 +7,11 @@ import java.util.*;
 
 import static com.company.AlgorithmMaker.*;
 import static com.company.MainWindow.*;
+/*
+* Useless class. Must be eradicated
+ */
 
-
-public class RunWindow implements WindowListener{
+public class RunWindow extends Thread implements WindowListener{
     private JTextArea executingArea;
     JPanel main;
     JFrame runWindowFrame;
@@ -17,7 +19,8 @@ public class RunWindow implements WindowListener{
 
 
     public RunWindow() {
-        executingArea = new JTextArea(30, 80);
+        //mainFrame.setEnabled(true);
+        /*executingArea = new JTextArea(30, 80);
         executingArea.setEditable(false);
         executingArea.setText("");
         JScrollPane executingAreaScrollPane = new JScrollPane(executingArea);
@@ -30,27 +33,19 @@ public class RunWindow implements WindowListener{
         runWindowFrame.setContentPane(main);
         runWindowFrame.pack();
         runWindowFrame.setVisible(true);
+*/
 
-       makeWindow();
+       //makeWindow();
     }
 
-    void makeWindow() {
-        executingArea = new JTextArea(30, 80);
-        executingArea.setEditable(false);
-        executingArea.setText("");
-        JScrollPane executingAreaScrollPane = new JScrollPane(executingArea);
-        main = new JPanel();
-        main.setOpaque(true);
-        main.add(executingAreaScrollPane);
-        runWindowFrame = new JFrame("Запуск");
-        runWindowFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        runWindowFrame.addWindowListener(this);
-        runWindowFrame.setContentPane(main);
-        runWindowFrame.pack();
-        runWindowFrame.setVisible(true);
+    public void run() {
+
         for(SystemInfo systemInfo:systemInfoVector){
             if(systemInfo.getDelay().length()==0){
-                executingArea.append(systemInfo.getInfoWithoutDelay()+"\n");
+                recount(systemInfo);
+                String usingDevice=systemInfo.getInfoWithoutDelayAndMode();
+                usingDevices.add(usingDevice);
+                //executingArea.append(systemInfo.getInfoWithoutDelay()+"\n");
             }
             if(systemInfo.getDelay().length()>0&&systemInfo.getRelation().length()>0){
                 String[] delay=systemInfo.getDelay().split("/");
@@ -63,6 +58,7 @@ public class RunWindow implements WindowListener{
                 executeDelay(Calendar.MILLISECOND,time,systemInfo.getInfoWithoutRelation()+" ",systemInfo);
             }
         }
+        Thread.currentThread().interrupt();
 
     }
     //Сделать варианты для большого количества часов\минут\секунд(как с миллисекундами)
@@ -76,8 +72,9 @@ public class RunWindow implements WindowListener{
             while (calendar.get(Calendar.HOUR) * 3600000 + calendar.get(Calendar.MINUTE) * 60000 + calendar.get(Calendar.SECOND) * 1000 + calendar.get(Calendar.MILLISECOND) < goalTime) {
                 calendar = Calendar.getInstance();
             }
-            executingArea.append(deviceInfo+"\n");
-            if(usingDevices.contains(systemInfo.getInfoWithoutDelayAndMode())){
+            //executingArea.append(deviceInfo+"\n");
+            recount(systemInfo);
+            /*if(usingDevices.contains(systemInfo.getInfoWithoutDelayAndMode())){
                 int index=usingDevices.indexOf(systemInfo.getInfoWithoutDelayAndMode());
                 SystemInfo usedDevice=systemInfoVector.get(index);
                 String[] usingMode=usedDevice.getMode().split("\t");
@@ -102,7 +99,7 @@ public class RunWindow implements WindowListener{
                             currentResourceUsage2+"/"+allResources.get(1)+"\t"+
                             currentResourceUsage3+"/"+allResources.get(2));
                 }
-            }
+            }*/
             String usingDevice=systemInfo.getInfoWithoutDelayAndMode();
             usingDevices.add(usingDevice);
         }
@@ -110,13 +107,61 @@ public class RunWindow implements WindowListener{
                 while (!done) {
                     calendar = Calendar.getInstance();
                     if (calendar.get(calendarConstant) >= time) {
-                        executingArea.append(deviceInfo+"\n");
+                        //executingArea.append(deviceInfo+"\n");
                         done = true;
                     }
                 }
             }
         }
 
+    private void recount(SystemInfo systemInfo) {
+        if (usingDevices.contains(systemInfo.getInfoWithoutDelayAndMode())) {
+            int index = usingDevices.indexOf(systemInfo.getInfoWithoutDelayAndMode());
+            SystemInfo usedDevice = systemInfoVector.get(index);
+            String[] usingMode = usedDevice.getMode().split("\t");
+            String[] currentMode = systemInfo.getMode().split("\t");
+            if (currentMode[0].equals("ВЫКЛ")) {
+                //replace with container
+                double prevResourceUsage1 = Double.parseDouble(usingMode[1]);
+                double prevResourceUsage2 = Double.parseDouble(usingMode[2]);
+                double prevResourceUsage3 = Double.parseDouble(usingMode[3]);
+                String resources = resourceMonitor.getText();
+                String[] tempRes = resources.split("\t");
+                double currentResourceUsage1 = Double.parseDouble(tempRes[0].split("/")[0]);
+                double currentResourceUsage2 = Double.parseDouble(tempRes[1].split("/")[0]);
+                double currentResourceUsage3 = Double.parseDouble(tempRes[2].split("/")[0]);
+                if (currentResourceUsage1 != 0)
+                    currentResourceUsage1 = currentResourceUsage1 - prevResourceUsage1;
+                if (currentResourceUsage2 != 0)
+                    currentResourceUsage2 = currentResourceUsage2 - prevResourceUsage2;
+                if (currentResourceUsage3 != 0)
+                    currentResourceUsage3 = currentResourceUsage3 - prevResourceUsage3;
+                resourceMonitor.setText(currentResourceUsage1 + "/" + allResources.get(0) + "\t" +
+                        currentResourceUsage2 + "/" + allResources.get(1) + "\t" +
+                        currentResourceUsage3 + "/" + allResources.get(2));
+                resourceMonitor.repaint();
+                resourceMonitor.revalidate();
+                mainFrame.repaint();
+            }
+        } else {
+            String[] currentMode = systemInfo.getMode().split("\t");
+            String[] tempResources = resourceMonitor.getText().split("\t");
+            double tempUsage1 = Double.parseDouble(tempResources[0].split("/")[0]);
+            double tempUsage2 = Double.parseDouble(tempResources[1].split("/")[0]);
+            double tempUsage3 = Double.parseDouble(tempResources[2].split("/")[0]);
+            double currentResourceUsage1 = Double.parseDouble(currentMode[1]) + tempUsage1;
+            double currentResourceUsage2 = Double.parseDouble(currentMode[2]) + tempUsage2;
+            double currentResourceUsage3 = Double.parseDouble(currentMode[3]) + tempUsage3;
+            resourceMonitor.setText(currentResourceUsage1 + "/" + allResources.get(0) + "\t" +
+                    currentResourceUsage2 + "/" + allResources.get(1) + "\t" +
+                    currentResourceUsage3 + "/" + allResources.get(2));
+            resourceMonitor.repaint();
+            resourceMonitor.revalidate();
+            mainFrame.repaint();
+
+
+        }
+    }
     private int convertToMilliseconds(String[] delay){
         int delayVal;
         String delayMetrics=delay[1];
