@@ -69,7 +69,6 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
         JScrollPane logPane=new JScrollPane(log);
         log.setEditable(false);
 
-        createRunButton();
 
         main=new JPanel();
         main.setLayout(new BoxLayout(main,BoxLayout.Y_AXIS));
@@ -150,17 +149,7 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
         }catch(IOException ex){}
         return true;
     }
-    private void createRunButton(){
-        runButton=new JButton ("Запустить");
-        buttonPanel.add(runButton);
-        runButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                RunWindow rw=new RunWindow();
-            }
-        });
 
-    }
     static void createWindow(){
         mainFrame.setVisible(false);
         mainFrame.setEnabled(false);
