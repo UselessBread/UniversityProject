@@ -1,12 +1,9 @@
 package com.company;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.Vector;
 
 /**
  * Created by Игорь on 03.08.2017.
@@ -61,7 +58,9 @@ public class GUI extends JPanel implements ActionListener{
         NewAlgorithmWindow algorithmWindow=new NewAlgorithmWindow(e,DBConnection);
 
     }
-
+    static JTextArea getLog(){
+        return log;
+    }
 
     static void createAndShowGUI(){
         mainFrame=new JFrame("УА РВ");

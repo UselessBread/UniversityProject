@@ -1,11 +1,13 @@
 package com.company;
 
 public class SystemInfo {
+    private String article;
     private String subsystem;
     private String deviceName;
     private String mode;
     private String delay;
     private String relation;
+    String getArticle(){return article;}
     String getSubsystem(){
         return subsystem;
     }
@@ -22,20 +24,23 @@ public class SystemInfo {
         return relation;
     }
     SystemInfo(){
+        this.article="";
         this.subsystem="";
         this.deviceName="";
         this.mode="";
         this.delay="";
         this.relation="";
     }
-    SystemInfo(String subsystem,String deviceName,String mode,String delay,String relation){
+    SystemInfo(String article,String subsystem,String deviceName,String mode,String delay,String relation){
+        this.article=article;
         this.subsystem=subsystem;
         this.deviceName=deviceName;
         this.mode=mode;
         this.delay=delay;
         this.relation=relation;
     }
-    void setAll(String subsystem,String deviceName,String mode,String delay,String relation){
+    void setAll(String article,String subsystem,String deviceName,String mode,String delay,String relation){
+        this.article=article;
         this.subsystem=subsystem;
         this.deviceName=deviceName;
         this.mode=mode;
@@ -43,19 +48,19 @@ public class SystemInfo {
         this.relation=relation;
     }
     String getInfoWithoutDelay(){
-        return getSubsystem()+" "+getDeviceName()+" "+getMode();
+        return getArticle()+" "+getSubsystem()+" "+getDeviceName()+" "+getMode();
     }
     String getInfoWithoutDelayAndMode(){
-        return getSubsystem()+" "+getDeviceName();
+        return getArticle()+" "+getSubsystem()+" "+getDeviceName();
     }
 
     String getAllInfo(){
-        return getSubsystem()+" "+getDeviceName()+" "+getMode()+" "+getDelay()+" "+getRelation();
+        return getArticle()+" "+ getSubsystem()+" "+getDeviceName()+" "+getMode()+" "+getDelay()+" "+getRelation();
     }
     String getInfoWithRelation(){
-        return getSubsystem()+" "+getDeviceName()+" "+getMode()+" "+getDelay()+" После "+getRelation();
+        return getArticle()+" "+getSubsystem()+" "+getDeviceName()+" "+getMode()+" "+getDelay()+" После "+getRelation();
     }
     String getInfoWithoutRelation(){
-        return getSubsystem()+" "+getDeviceName()+" "+getMode()+" "+getDelay();
+        return getArticle()+" "+getSubsystem()+" "+getDeviceName()+" "+getMode()+" "+getDelay();
     }
 }

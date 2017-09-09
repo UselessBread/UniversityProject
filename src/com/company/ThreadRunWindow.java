@@ -7,10 +7,11 @@ import static com.company.AlgorithmMaker.algorithmMakerFrame;
 import static com.company.MainWindow.*;
 
 public class ThreadRunWindow extends Thread {
-    private JTextArea executingArea=new JTextArea(10,30);
+    private JTextArea executingArea=new JTextArea(10,80);
     private ArrayList<String> usingDevices=new ArrayList<>();
 
     public void run() {
+        executingArea.setEditable(false);
         JPanel main=new JPanel();
         JFrame runWindowFrame=new JFrame("Executing");
         JScrollPane textPane=new JScrollPane(executingArea);
@@ -21,7 +22,7 @@ public class ThreadRunWindow extends Thread {
         runWindowFrame.pack();
         runWindowFrame.setVisible(true);
         try {
-            for (SystemInfo systemInfo : systemInfoVector) {
+            for (SystemInfo systemInfo : MainWindow.getSystemInfoVector()) {
                 if (systemInfo.getDelay().length() == 0) {
                     recount(systemInfo);
                     executingArea.append(systemInfo.getAllInfo()+"\n");
@@ -53,7 +54,7 @@ public class ThreadRunWindow extends Thread {
     private void recount(SystemInfo systemInfo) {
         if (usingDevices.contains(systemInfo.getInfoWithoutDelayAndMode())) {
             int index = usingDevices.indexOf(systemInfo.getInfoWithoutDelayAndMode());
-            SystemInfo usedDevice = systemInfoVector.get(index);
+            SystemInfo usedDevice = MainWindow.getSystemInfoVector().get(index);
             String[] usingMode = usedDevice.getMode().split("\t");
             String[] currentMode = systemInfo.getMode().split("\t");
             if (currentMode[0].equals("ВЫКЛ")) {

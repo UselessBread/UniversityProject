@@ -11,14 +11,16 @@ import java.util.ArrayList;
 import java.util.Vector;
 
 public class MainWindow extends JPanel implements ActionListener {
-    static Vector<SystemInfo> systemInfoVector=new Vector<>();
-    static Vector<Vector<SystemInfo>> systemInfoVectorVector=new Vector<>();
     private final String NEW_ALGORITHM = "Create new algorithm";
     private final String OPEN = "Open algorithm";
+    private final String ADD="Add to db";
+    private static Vector<SystemInfo> systemInfoVector=new Vector<>();
+    private static Vector<SystemInfo> systemInfoVectorForSaving=new Vector<>();
+    static Vector<Vector<SystemInfo>> systemInfoVectorVector=new Vector<>();
     private DB DBC=new DB();
-    static JPanel mainPanel = new JPanel();
+    private static JPanel mainPanel = new JPanel();
     static JFrame mainFrame;
-    JTextArea openedAlgorithms=new JTextArea(5,30);
+    private JTextArea openedAlgorithms=new JTextArea(5,30);
     static JTextArea resourceMonitor=new JTextArea(1,30);
     ArrayList<Double> usedResources=new ArrayList<>();
     static ArrayList<Double> allResources;
@@ -28,16 +30,21 @@ public class MainWindow extends JPanel implements ActionListener {
         resourceMonitor.append("0/"+resources.get(0)+" 0/"+resources.get(1)+" 0/"+resources.get(2));
         resourceMonitor.setEditable(false);
         openedAlgorithms.setEditable(false);
+
         JButton addButton = new JButton("Новый алгоритм");
         addButton.setActionCommand(NEW_ALGORITHM);
         addButton.addActionListener(this);
         JButton openButton = new JButton("Открыть существующий алгоритм");
         openButton.setActionCommand(OPEN);
         openButton.addActionListener(this);
+        JButton addToDBButton=new JButton("Добавить");
+        addToDBButton.setActionCommand(ADD);
+        addToDBButton.addActionListener(this);
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(addButton);
         buttonPanel.add(openButton);
+        buttonPanel.add(addToDBButton);
         JSplitPane splitPane=new JSplitPane();
         splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
         splitPane.setTopComponent(buttonPanel);
@@ -81,8 +88,6 @@ public class MainWindow extends JPanel implements ActionListener {
                             0+"/"+allResources.get(1)+"\t"+
                             0+"/"+allResources.get(2));
                     openedAlgorithms.append(usedNames.getSelectedValue()+"\n");
-                    //RunWindow runWindow=new RunWindow();
-                    //(new RunWindow()).start();
                     (new ThreadRunWindow()).start();
                 }
             });
@@ -99,9 +104,15 @@ public class MainWindow extends JPanel implements ActionListener {
             openFrame.setVisible(true);
 
         }
+        if(e.getActionCommand().equals(ADD)){
+            (new ThreadDBUpdater()).start();
+        }
 
     }
-
+    static Vector<SystemInfo> getSystemInfoVector(){
+        return systemInfoVector;
+    }
+    static Vector<SystemInfo> getSystemInfoVectorForSaving(){return systemInfoVectorForSaving;}
     private Vector<String> getUsedNames() {
         String line;
         Vector<String> usedNames=new Vector<>();

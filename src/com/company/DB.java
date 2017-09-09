@@ -2,14 +2,12 @@ package com.company;
 
 /**
  * Created by Игорь on 08.08.2017.
+ * queryToSensor && queryToDevice should be united
  */
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
 import java.util.Vector;
 
-import static com.company.MainWindow.systemInfoVector;
 
 public class DB {
     static  final int CLASS_NOT_FOUND=-11;
@@ -19,18 +17,17 @@ public class DB {
     private int subsystemNumber,deviceOrSensorNumber;
     private Connection connection = null;
     private Statement statement = null;
-    Savepoint savepoint;
-    ResultSet result;
+    private Savepoint savepoint;
     int state;
 
-    public DB() {
+    DB() {
         String url = "jdbc:mysql://127.0.0.1:3306/ка";
         String user = "root";
         String password = "5986";
         state=connect(url,user,password);
     }
 
-    public int connect(String url,String user, String password) {
+    private int connect(String url,String user, String password) {
         try {
             Class.forName("com.mysql.jdbc.Driver");
             connection = DriverManager.getConnection(url, user, password);
@@ -42,7 +39,7 @@ public class DB {
         }
         return OK;
     }
-    public Object execQuery(String query){
+    private Object execQuery(String query){
         try {
            return statement.executeQuery(query);
         }catch (SQLException exc){return SQL_EXCEPTION;}
@@ -91,19 +88,22 @@ public class DB {
             return OK;
         }
     }
-    public Vector<String> queryToPodsys(String selectedItem) {
+    //article=изделие_№, selectedItem-выбранная подсистема
+    Vector<String> queryToSubsys(String article,String selectedItem) {
         Vector<String> stringVector=new Vector<>();
-        subsystemNumber = Integer.parseInt(selectedItem);
-        String query = "SELECT подсистема_"+ subsystemNumber + ".idприбора,подсистема_"+ subsystemNumber + ".idдатчика\n" +
-                "FROM подсистемы\n" +
-                "INNER JOIN подсистема_"+ subsystemNumber + " ON подсистемы.idподсистемы=подсистема_"+ subsystemNumber + ".idподсистема\n" ;
+        String query = "SELECT название,idприбор_for\n" +
+                "FROM ка.изделия\n" +
+                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
+                "inner join "+selectedItem+"_"+article+" on "+article+".подсистемы="+selectedItem+"_"+article+".idподсистема\n" +
+                "left join приборы_"+article+"_"+selectedItem+" on "+selectedItem+"_"+article+".idприбора=приборы_"+article+"_"+selectedItem+".idприборы\n" +
+                "left join датчики_"+article+"_"+selectedItem+" on "+selectedItem+"_"+article+".idдатчика=датчики_"+article+"_"+selectedItem+".idдатчики";
         Object resultObject = execQuery(query);
         if (verifyResult(resultObject)==OK) {
             ResultSet resultSet = (ResultSet) resultObject;
             try {
                 while (resultSet.next()) {
-                    stringVector.add("Прибор"+resultSet.getString("idприбора"));
-                    stringVector.add("Датчик"+resultSet.getString("idдатчика"));
+                    stringVector.add(resultSet.getString("название"));
+                    stringVector.add(resultSet.getString("idприбор_for"));
                 }
             } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
@@ -124,89 +124,341 @@ public class DB {
         }
         return stringVector;
     }
-    public Vector<Vector<String>> queryToDeviceOrSensor(String result){
-        boolean device=false;
-        boolean sensor=false;
-        Vector<String> vectorForList=new Vector<>();
-        Vector<String> vectorForButtons=new Vector<>();
-        Vector<Vector<String>> resultVec=new Vector<>();
-        Object resultObject;
-        String end=result.substring(result.length()-1);
-       deviceOrSensorNumber=Integer.parseInt(end);
-        String queryToDevice="SELECT режимы_прибор_"+deviceOrSensorNumber+".idрежима,режимы_прибор_"+deviceOrSensorNumber+".потребление_ресурса1,режимы_прибор_"+deviceOrSensorNumber+".потребление_ресурса2,режимы_прибор_"+deviceOrSensorNumber+".потребление_ресурса3\n" +
-                "FROM подсистемы\n" +
-                "INNER JOIN подсистема_"+ subsystemNumber + " ON подсистемы.idподсистемы=подсистема_"+ subsystemNumber + ".idподсистема \n" +
-                "INNER JOIN приборы ON подсистема_"+ subsystemNumber + ".idприбора=приборы.idприборы\n" +
-                "INNER JOIN датчики ON подсистема_"+ subsystemNumber + ".idдатчика=датчики.idдатчики\n" +
-                "INNER JOIN прибор_"+deviceOrSensorNumber+" ON приборы.idприбор_for=прибор_"+deviceOrSensorNumber+".idприбор\n"+
-                "INNER JOIN режимы_прибор_"+deviceOrSensorNumber+" ON прибор_"+deviceOrSensorNumber+".режимы=режимы_прибор_"+deviceOrSensorNumber+".idрежима;";
-
-        String queryToSensor="SELECT режимы_датчик_"+deviceOrSensorNumber+".idрежима,режимы_датчик_"+deviceOrSensorNumber+".потребление_ресурса1,режимы_датчик_"+deviceOrSensorNumber+".потребление_ресурса2,режимы_датчик_"+deviceOrSensorNumber+".потребление_ресурса3\n" +
-                "FROM подсистемы\n" +
-                "INNER JOIN подсистема_"+ subsystemNumber + " ON подсистемы.idподсистемы=подсистема_"+ subsystemNumber + ".idподсистема \n" +
-                "INNER JOIN приборы ON подсистема_"+ subsystemNumber + ".idприбора=приборы.idприборы\n" +
-                "INNER JOIN датчики ON подсистема_"+ subsystemNumber + ".idдатчика=датчики.idдатчики\n" +
-                "INNER JOIN датчик_"+deviceOrSensorNumber+" ON датчики.название=датчик_"+deviceOrSensorNumber+".idдатчик\n"+
-                "INNER JOIN режимы_датчик_"+deviceOrSensorNumber+" ON датчик_"+deviceOrSensorNumber+".режимы=режимы_датчик_"+deviceOrSensorNumber+".idрежима;";
-        if(result.contains("Прибор")){
-            device=true;
-            resultObject=execQuery(queryToDevice);
-        }
-        else if(result.contains("Датчик")){
-            sensor=true;
-            resultObject=execQuery(queryToSensor);
-        }
-        else{
-            //replace later
-            resultObject=SQL_EXCEPTION;
-        }
+    Vector<String> queryToSubsys(String article,String selectedItem,ArrayList<Integer> lastIndex) {
+        Vector<String> stringVector=new Vector<>();
+        String query = "SELECT название,idприбор_for\n" +
+                "FROM ка.изделия\n" +
+                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
+                "inner join "+selectedItem+"_"+article+" on "+article+".подсистемы="+selectedItem+"_"+article+".idподсистема\n" +
+                "inner join приборы_"+article+"_"+selectedItem+" on "+selectedItem+"_"+article+".idприбора=приборы_"+article+"_"+selectedItem+".idприборы\n" +
+                "inner join датчики_"+article+"_"+selectedItem+" on "+selectedItem+"_"+article+".idдатчика=датчики_"+article+"_"+selectedItem+".idдатчики";
+        Object resultObject = execQuery(query);
         if (verifyResult(resultObject)==OK) {
             ResultSet resultSet = (ResultSet) resultObject;
-            vectorForList.add("Режим");
-            vectorForList.add("Потребление ресурса 1");
-            vectorForList.add("Потребление ресурса 2");
-            vectorForList.add("Потребление ресурса 3");
-            resultVec.add(vectorForList);
             try {
-                if(device) {
-                    while (resultSet.next()) {
-                        //stringVector.add(resultSet.getString("idприбор"));
-                        vectorForButtons.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
-                        resultSet.getString("потребление_ресурса2")+"\t"+resultSet.getString("потребление_ресурса3"));
-                    }
-                }
-                if(sensor){
-                    while (resultSet.next()) {
-                        //stringVector.add(resultSet.getString("idдатчик"));
-                        vectorForButtons.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
-                        resultSet.getString("потребление_ресурса2")+"\t"+resultSet.getString("потребление_ресурса3"));
-                    }
+                while (resultSet.next()) {
+                    stringVector.add(resultSet.getString("название"));
+                    stringVector.add(resultSet.getString("idприбор_for"));
                 }
             } catch (SQLException SQLexc) {
-                vectorForButtons.add(Integer.toString(SQL_EXCEPTION));
-                resultVec.add(vectorForButtons);
-                return resultVec;
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return stringVector;
             }
         }
         else if(verifyResult(resultObject)==CLASS_NOT_FOUND){
-            vectorForButtons.add(Integer.toString(CLASS_NOT_FOUND));
-            resultVec.add(vectorForButtons);
-            return resultVec;
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
         }
         else if(verifyResult(resultObject)==SQL_EXCEPTION){
-            vectorForButtons.add(Integer.toString(SQL_EXCEPTION));
-            resultVec.add(vectorForButtons);
-            return resultVec;
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
         }
         else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
-            vectorForButtons.add(Integer.toString(CLASS_CAST_EXCEPTION));
-            resultVec.add(vectorForButtons);
-            return resultVec;
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
         }
-        resultVec.add(vectorForButtons);
-        return resultVec;
+        String lasIndexQuery="SELECT idприбора,idдатчика FROM `ка`.`"+selectedItem+"_"+article+"`;";
+        resultObject = execQuery(lasIndexQuery);
+        int device=0,sensor=0;
+        if (verifyResult(resultObject)==OK) {
+            ResultSet resultSet = (ResultSet) resultObject;
+            try {
+                while (resultSet.next()) {
+                    device=resultSet.getInt("idприбора");
+                    sensor=resultSet.getInt("idдатчика");
+                }
+            } catch (SQLException SQLexc) {
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return stringVector;
+            }
+            lastIndex.add(device);
+            lastIndex.add(sensor);
+        }
+        else if(verifyResult(resultObject)==CLASS_NOT_FOUND){
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
+        }
+        else if(verifyResult(resultObject)==SQL_EXCEPTION){
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
+        }
+        else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
+        }
+        return stringVector;
     }
-    int execUpdate(String query) {
+
+    Vector<String> queryToArticles() {
+        String query = "SELECT * FROM изделия;";
+        Vector<String> sVec = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    sVec.add(resultSet.getString("имя_изделия"));
+                }
+            } catch (SQLException SQLexc) {
+                sVec.add(Integer.toString(SQL_EXCEPTION));
+                return sVec;
+            }
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            sVec.add(Integer.toString(CLASS_NOT_FOUND));
+            return sVec;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            sVec.add(Integer.toString(SQL_EXCEPTION));
+            return sVec;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            sVec.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return sVec;
+        }
+        return sVec;
+    }
+    Vector<String> queryToArticles(ArrayList<Integer> lastIndex) {
+        String query = "SELECT * FROM изделия;";
+        Vector<String> sVec = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    sVec.add(resultSet.getString("имя_изделия"));
+                    lastIndex.clear();
+                    lastIndex.add(resultSet.getInt("id"));
+                }
+            } catch (SQLException SQLexc) {
+                sVec.add(Integer.toString(SQL_EXCEPTION));
+                return sVec;
+            }
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            sVec.add(Integer.toString(CLASS_NOT_FOUND));
+            return sVec;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            sVec.add(Integer.toString(SQL_EXCEPTION));
+            return sVec;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            sVec.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return sVec;
+        }
+        return sVec;
+    }
+
+    Vector<String> queryToArticle(String prevQueryResult) {
+        String query="SELECT подсистемы\n" +
+                "FROM ка.изделия\n" +
+                "inner join "+prevQueryResult+" on изделия.имя_изделия="+prevQueryResult+".имя;";
+        Vector<String> stringVector=new Vector<>();
+        Object resultObject=execQuery(query);
+        if(verifyResult(resultObject)==OK){
+            try{
+                ResultSet resultSet=(ResultSet)resultObject;
+                while(resultSet.next()){
+                    stringVector.add(resultSet.getString("подсистемы"));
+                }
+            }catch(SQLException SQLexc){
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return  stringVector;
+            }
+        }
+        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
+        }
+        return stringVector;
+
+    }
+    Vector<String> queryToArticle(String prevQueryResult,ArrayList<Integer> lastIndex) {
+        String query="SELECT "+prevQueryResult+".id,подсистемы\n" +
+                "FROM ка.изделия\n" +
+                "inner join "+prevQueryResult+" on изделия.имя_изделия="+prevQueryResult+".имя;";
+        Vector<String> stringVector=new Vector<>();
+        Object resultObject=execQuery(query);
+        if(verifyResult(resultObject)==OK){
+            try{
+                ResultSet resultSet=(ResultSet)resultObject;
+                while(resultSet.next()){
+                    stringVector.add(resultSet.getString("подсистемы"));
+                    lastIndex.clear();
+                    lastIndex.add(resultSet.getInt("id"));
+                }
+            }catch(SQLException SQLexc){
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return  stringVector;
+            }
+            if(lastIndex.size()==0){
+                lastIndex.add(0);
+            }
+        }
+        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
+        }
+        return stringVector;
+
+    }
+    //selectedItem- имя выбранного прибора
+    Vector<String> queryToDevice(String article,String subsystem,String selectedItem){
+        String query="SELECT idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+                "FROM ка.изделия\n" +
+                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
+                "inner join "+subsystem+"_"+article+" on "+article+".подсистемы="+subsystem+"_"+article+".idподсистема\n" +
+                "left join приборы_"+article+"_"+subsystem+" on "+subsystem+"_"+article+".idприбора=приборы_"+article+"_"+subsystem+".idприборы\n" +
+                "inner join "+selectedItem+"_"+article+"_"+subsystem+" on приборы_"+article+"_"+subsystem+".idприбор_for="+selectedItem+"_"+article+"_"+subsystem+".idприбор\n" +
+                "inner join режимы_"+selectedItem+"_"+article+"_"+subsystem+" on "+selectedItem+"_"+article+"_"+subsystem+".режимы=режимы_"+selectedItem+"_"+article+"_"+subsystem+".idрежима;";
+        Vector<String> stringVector=new Vector<>();
+        Object resultObject=execQuery(query);
+        if(verifyResult(resultObject)==OK){
+            try{
+                ResultSet resultSet=(ResultSet)resultObject;
+                while(resultSet.next()){
+                    stringVector.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
+                            resultSet.getString("потребление_ресурса2")+"\t"+ resultSet.getString("потребление_ресурса3"));
+                }
+            }catch(SQLException SQLexc){
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return  stringVector;
+            }
+        }
+        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
+        }
+        return stringVector;
+    }
+    Vector<String> queryToDevice(String article,String subsystem,String selectedItem,ArrayList<Integer> lastIndex){
+        String query="SELECT `"+selectedItem+"_"+article+"_"+subsystem+"`.`id`,idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+                "FROM ка.изделия\n" +
+                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
+                "inner join "+subsystem+"_"+article+" on "+article+".подсистемы="+subsystem+"_"+article+".idподсистема\n" +
+                "left join приборы_"+article+"_"+subsystem+" on "+subsystem+"_"+article+".idприбора=приборы_"+article+"_"+subsystem+".idприборы\n" +
+                "inner join "+selectedItem+"_"+article+"_"+subsystem+" on приборы_"+article+"_"+subsystem+".idприбор_for="+selectedItem+"_"+article+"_"+subsystem+".idприбор\n" +
+                "inner join режимы_"+selectedItem+"_"+article+"_"+subsystem+" on "+selectedItem+"_"+article+"_"+subsystem+".режимы=режимы_"+selectedItem+"_"+article+"_"+subsystem+".idрежима;";
+        Vector<String> stringVector=new Vector<>();
+        Object resultObject=execQuery(query);
+        if(verifyResult(resultObject)==OK){
+            try{
+                ResultSet resultSet=(ResultSet)resultObject;
+                while(resultSet.next()){
+                    stringVector.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
+                            resultSet.getString("потребление_ресурса2")+"\t"+ resultSet.getString("потребление_ресурса3"));
+                    lastIndex.clear();
+                    lastIndex.add(resultSet.getInt("id"));
+                }
+            }catch(SQLException SQLexc){
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return  stringVector;
+            }
+            if(lastIndex.size()==0){
+                lastIndex.add(0);
+            }
+        }
+        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
+        }
+        return stringVector;
+    }
+    //selectedItem- имя выбранного датчика
+    Vector<String> queryToSensor(String article,String subsystem,String selectedItem){
+        String query="SELECT idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+                "FROM ка.изделия\n" +
+                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
+                "inner join "+subsystem+"_"+article+" on "+article+".подсистемы="+subsystem+"_"+article+".idподсистема\n" +
+                "left join датчики_"+article+"_"+subsystem+" on "+subsystem+"_"+article+".idдатчика=датчики_"+article+"_"+subsystem+".idдатчики\n" +
+                "inner join "+selectedItem+"_"+article+"_"+subsystem+" on датчики_"+article+"_"+subsystem+".название="+selectedItem+"_"+article+"_"+subsystem+".idдатчик\n" +
+                "inner join режимы_"+selectedItem+"_"+article+"_"+subsystem+" on "+selectedItem+"_"+article+"_"+subsystem+".режимы=режимы_"+selectedItem+"_"+article+"_"+subsystem+".idрежима;";
+        Vector<String> stringVector=new Vector<>();
+        Object resultObject=execQuery(query);
+        if(verifyResult(resultObject)==OK){
+            try{
+                ResultSet resultSet=(ResultSet)resultObject;
+                while(resultSet.next()){
+                    stringVector.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
+                            resultSet.getString("потребление_ресурса2")+"\t"+ resultSet.getString("потребление_ресурса3"));
+                }
+            }catch(SQLException SQLexc){
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return  stringVector;
+            }
+        }
+        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
+        }
+        return stringVector;
+    }
+    Vector<String> queryToSensor(String article,String subsystem,String selectedItem,ArrayList<Integer> lastIndex){
+        String query="SELECT `"+selectedItem+"_"+article+"_"+subsystem+"`.`id`,idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+                "FROM ка.изделия\n" +
+                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
+                "inner join "+subsystem+"_"+article+" on "+article+".подсистемы="+subsystem+"_"+article+".idподсистема\n" +
+                "left join датчики_"+article+"_"+subsystem+" on "+subsystem+"_"+article+".idдатчика=датчики_"+article+"_"+subsystem+".idдатчики\n" +
+                "inner join "+selectedItem+"_"+article+"_"+subsystem+" on датчики_"+article+"_"+subsystem+".название="+selectedItem+"_"+article+"_"+subsystem+".idдатчик\n" +
+                "inner join режимы_"+selectedItem+"_"+article+"_"+subsystem+" on "+selectedItem+"_"+article+"_"+subsystem+".режимы=режимы_"+selectedItem+"_"+article+"_"+subsystem+".idрежима;";
+        Vector<String> stringVector=new Vector<>();
+        Object resultObject=execQuery(query);
+        if(verifyResult(resultObject)==OK){
+            try{
+                ResultSet resultSet=(ResultSet)resultObject;
+                while(resultSet.next()){
+                    stringVector.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
+                            resultSet.getString("потребление_ресурса2")+"\t"+ resultSet.getString("потребление_ресурса3"));
+                    lastIndex.clear();
+                    lastIndex.add(resultSet.getInt("id"));
+                }
+            }catch(SQLException SQLexc){
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return  stringVector;
+            }
+            if(lastIndex.size()==0){
+                lastIndex.add(0);
+            }
+        }
+        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
+        }
+        return stringVector;
+    }
+
+    private int execUpdate(String query) {
         try {
             savepoint=connection.setSavepoint();
             connection.setAutoCommit(false);
@@ -225,6 +477,7 @@ public class DB {
     int saveToDB(String name,Vector<SystemInfo> systemInfoVector){
         String query="CREATE TABLE `ка`.`"+name+"` (\n" +
                 "  `id` INT NOT NULL AUTO_INCREMENT,\n" +
+                "  `изделие` VARCHAR(45) NULL,\n" +
                 "  `подсистема` VARCHAR(45) NULL,\n" +
                 "  `устройство` VARCHAR(45) NULL,\n" +
                 "  `режим` VARCHAR(45) NULL,\n" +
@@ -248,8 +501,8 @@ public class DB {
         }
         for(SystemInfo systemInfo:systemInfoVector){
 
-            String insertQuery="INSERT INTO `ка`.`"+name+"` (`подсистема`,`устройство`,`режим`,`задержка`,`отношение`)\n"+
-                    "VALUES('"+systemInfo.getSubsystem()+"','"+systemInfo.getDeviceName()+"','"+systemInfo.getMode()+"','"+systemInfo.getDelay()+"','"+systemInfo.getRelation()+"');";
+            String insertQuery="INSERT INTO `ка`.`"+name+"` (`изделие`,`подсистема`,`устройство`,`режим`,`задержка`,`отношение`)\n"+
+                    "VALUES('"+systemInfo.getArticle()+"','"+systemInfo.getSubsystem()+"','"+systemInfo.getDeviceName()+"','"+systemInfo.getMode()+"','"+systemInfo.getDelay()+"','"+systemInfo.getRelation()+"');";
             result=execUpdate(insertQuery);
             verRes=verifyResult(result);
             if(verRes==CLASS_NOT_FOUND) {
@@ -272,6 +525,7 @@ public class DB {
             ResultSet resultSet = (ResultSet) resultObject;
             try{
                 while (resultSet.next()){
+                    String article=resultSet.getString("изделие")+" ";
                     String subsystem=resultSet.getString("подсистема")+" ";
                     String deviceName=resultSet.getString("устройство")+" ";
                     String mode=resultSet.getString("режим");
@@ -279,8 +533,8 @@ public class DB {
                     String relation=resultSet.getString("отношение");
                     if (relation.length()==0)
                         relation="";
-                    SystemInfo systemInfo=new SystemInfo(subsystem,deviceName,mode,delay,relation);
-                    systemInfoVector.add(systemInfo);
+                    SystemInfo systemInfo=new SystemInfo(article,subsystem,deviceName,mode,delay,relation);
+                    MainWindow.getSystemInfoVector().add(systemInfo);
                 }
             }catch(SQLException e){}
         }
@@ -293,7 +547,7 @@ public class DB {
         else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
             return CLASS_CAST_EXCEPTION;
         }
-        return systemInfoVector;
+        return MainWindow.getSystemInfoVector();
     }
     ArrayList<Double> getAllResources(){
         ArrayList<Double> resultList=new ArrayList<>();
@@ -324,5 +578,242 @@ public class DB {
             return resultList;
         }
         return resultList;
+    }
+    Vector<Vector<String>> getResourcesCountAndNamesAndMaxValue() {
+        Vector<String> resourceVector=new Vector<>();
+        Vector<String> vectorOfNames=new Vector<>();
+        Vector<Vector<String>> resultVector=new Vector<>();
+
+        String query="SELECT * FROM `ка`.`ресурсы`";
+        Object resultObject=execQuery(query);
+        int test=verifyResult(resultObject);
+        if(test==CLASS_NOT_FOUND){
+            vectorOfNames.add(Integer.toString(CLASS_NOT_FOUND));
+            resultVector.add(vectorOfNames);
+            resultVector.add(resourceVector);
+            return resultVector;
+        }
+        if(test==CLASS_CAST_EXCEPTION){
+            vectorOfNames.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            resultVector.add(vectorOfNames);
+            resultVector.add(resourceVector);
+            return resultVector;
+        }
+        if(test==SQL_EXCEPTION){
+            vectorOfNames.add(Integer.toString(SQL_EXCEPTION));
+            resultVector.add(vectorOfNames);
+            resultVector.add(resourceVector);
+            return resultVector;
+        }
+        ResultSet resultSet=(ResultSet)resultObject;
+        try {
+            while (resultSet.next()){
+                resourceVector.add(resultSet.getString("ресурс_1"));
+                resourceVector.add(resultSet.getString("ресурс_2"));
+                resourceVector.add(resultSet.getString("ресурс_3"));
+            }
+        }catch (SQLException SQLexc){
+            vectorOfNames.clear();
+            vectorOfNames.add(Integer.toString(SQL_EXCEPTION));
+            resultVector.add(vectorOfNames);
+            resultVector.add(resourceVector);
+            return resultVector;
+        }
+        vectorOfNames.add("ресурс_1");
+        vectorOfNames.add("ресурс_2");
+        vectorOfNames.add("ресурс_3");
+        resultVector.add(vectorOfNames);
+        resultVector.add(resourceVector);
+        return resultVector;
+    }
+    Vector<String> getModeNames(){
+        Vector<String>modeNames=new Vector<>();
+        String query="SELECT * FROM `ка`.`ресурсы`";
+        Object resultObject=execQuery(query);
+        int test=verifyResult(resultObject);
+        if(test==CLASS_CAST_EXCEPTION){}
+        if(test==CLASS_NOT_FOUND){}
+        if(test==SQL_EXCEPTION){}
+        ResultSet resultSet=(ResultSet)resultObject;
+        try{
+            while(resultSet.next()){
+                modeNames.add(resultSet.getString("idрежима"));
+            }
+        }catch (SQLException ex){}
+        return modeNames;
+    }
+    //For ThreadDBUpdater
+    int addArticle(String articleName,Integer lastIndex){
+        lastIndex++;
+        String addQuery="INSERT INTO `ка`.`изделия` VALUES("+lastIndex+",'"+articleName+"');";
+        String createQuery=" CREATE TABLE `"+articleName+"` (\n" +
+                "  `id` int(11) NOT NULL,\n" +
+                "  `имя` varchar(45) DEFAULT NULL,\n" +
+                "  `подсистемы` varchar(45) DEFAULT NULL,\n" +
+                "  PRIMARY KEY (`id`),\n" +
+                "  UNIQUE KEY `id_UNIQUE` (`id`),\n" +
+                "  UNIQUE KEY `подсистемы_UNIQUE` (`подсистемы`),\n" +
+                "  KEY `FK_имя_изделия` (`имя`),\n" +
+                "  CONSTRAINT `FK_имя_изделия_"+articleName+"` FOREIGN KEY (`имя`) REFERENCES `изделия` (`имя_изделия`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8 ";
+        int resultState=execUpdate(createQuery);
+        int resultState1=execUpdate(addQuery);
+        if(resultState==CLASS_NOT_FOUND||resultState1==CLASS_NOT_FOUND) {
+            return CLASS_NOT_FOUND;
+        }
+        if(resultState==SQL_EXCEPTION||resultState1==SQL_EXCEPTION) {
+            return SQL_EXCEPTION;
+        }
+        if(resultState==CLASS_CAST_EXCEPTION||resultState1==CLASS_CAST_EXCEPTION) {
+            return CLASS_CAST_EXCEPTION;
+        }
+        return OK;
+    }
+    int addSubsystem(String articleName,String subsystemName,Integer lastIndex){
+        //Поставить константы,Запрос на добавление в подсистемы
+        //Вычислять индекс самостоятельно
+        String addSensorsTable="CREATE TABLE `ка`.`датчики_"+articleName+"_"+subsystemName+"` (\n" +
+                "  `idдатчики` int(11) NOT NULL,\n" +
+                "  `название` varchar(45) NOT NULL,\n" +
+                "  PRIMARY KEY (`название`,`idдатчики`),\n" +
+                "  UNIQUE KEY `название_UNIQUE` (`название`),\n" +
+                "  UNIQUE KEY `idдатчики_UNIQUE` (`idдатчики`),\n" +
+                "  CONSTRAINT `FK_idдатчики_"+subsystemName+"_"+articleName+"` FOREIGN KEY (`idдатчики`) REFERENCES `"+subsystemName+"_"+articleName+"` (`idдатчика`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        String addDevicesTable="CREATE TABLE `ка`.`приборы_"+articleName+"_"+subsystemName+"` (\n" +
+                "  `idприборы` int(11) DEFAULT NULL,\n" +
+                "  `idприбор_for` varchar(45) DEFAULT NULL,\n" +
+                "  `id` varchar(45) NOT NULL,\n" +
+                "  PRIMARY KEY (`id`),\n" +
+                "  KEY `idприбор_1_idx` (`idприбор_for`),\n" +
+                "  KEY `FK_idприборы_idx` (`idприборы`),\n" +
+                "  CONSTRAINT `FK_idприборы_"+subsystemName+"_"+articleName+"` FOREIGN KEY (`idприборы`) REFERENCES `"+subsystemName+"_"+articleName+"` (`idприбора`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8 ";
+        String addQuery="INSERT INTO "+articleName+" VALUES ("+lastIndex+1+",'"+articleName+"','"+subsystemName+"');";
+        String createQuery=" CREATE TABLE `ка`.`"+subsystemName+"_"+articleName+"` (\n" +
+                "  `idподсистема` varchar(45) NOT NULL,\n" +
+                "  `idприбора` int(11) NOT NULL DEFAULT 0,\n" +
+                "  `idдатчика` int(11) NOT NULL DEFAULT 0,\n" +
+                "  PRIMARY KEY (`idприбора`,`idдатчика`),\n" +
+                "  UNIQUE KEY `idприбора_UNIQUE` (`idприбора`),\n" +
+                "  UNIQUE KEY `idдатчика_UNIQUE` (`idдатчика`),\n" +
+                "  KEY `FK_idподсистема_idx` (`idподсистема`),\n" +
+                "  CONSTRAINT `FK_idподсистема"+articleName+"_"+subsystemName+"` FOREIGN KEY (`idподсистема`) REFERENCES `"+articleName+"` (`подсистемы`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8                           ";
+        int resultState=execUpdate(createQuery);
+        int resultState1=execUpdate(addQuery);
+        int resultState2=execUpdate(addSensorsTable);
+        int resultState3=execUpdate(addDevicesTable);
+        if(resultState==CLASS_NOT_FOUND||resultState1==CLASS_NOT_FOUND||resultState2==CLASS_NOT_FOUND||resultState3==CLASS_NOT_FOUND) {
+            return CLASS_NOT_FOUND;
+        }
+        if(resultState==SQL_EXCEPTION||resultState1==SQL_EXCEPTION||resultState2==SQL_EXCEPTION||resultState3==SQL_EXCEPTION) {
+            return SQL_EXCEPTION;
+        }
+        if(resultState==CLASS_CAST_EXCEPTION||resultState1==CLASS_CAST_EXCEPTION||resultState2==CLASS_CAST_EXCEPTION||resultState3==CLASS_CAST_EXCEPTION) {
+            return CLASS_CAST_EXCEPTION;
+        }
+        return OK;
+    }
+    //lastIndex здесь-индекс устройства
+    int addDevice(String articleName,String subsystemName, String deviceName,Integer lastIndex){
+        lastIndex++;
+        String subsystemAddQuery="INSERT INTO `ка`."+subsystemName+"_"+articleName+" (idподсистема,idприбора) VALUES('"+subsystemName+"',"+lastIndex+");\n";
+        String addQuery="INSERT INTO `ка`.приборы_"+articleName+"_"+subsystemName+" VALUES("+lastIndex+",'"+deviceName+"','"+lastIndex+"');";
+        String createQuery=" CREATE TABLE `ка`.`"+deviceName+"_"+articleName+"_"+subsystemName+"` (\n" +
+                "  `idприбор` varchar(45) DEFAULT NULL,\n" +
+                "  `режимы` varchar(45) NOT NULL,\n" +
+                "  `id` int(11) NOT NULL,\n" +
+                "  PRIMARY KEY (`id`,`режимы`),\n" +
+                "  KEY `idрежима_idx` (`режимы`),\n" +
+                "  KEY `FK_прибор` (`idприбор`),\n" +
+                "  CONSTRAINT `FK_прибор"+articleName+"_"+subsystemName+"_"+deviceName+"` FOREIGN KEY (`idприбор`) REFERENCES `приборы_"+articleName+"_"+subsystemName+"` (`idприбор_for`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        String createModeTable=" CREATE TABLE `ка`.`режимы_"+deviceName+"_"+articleName+"_"+subsystemName+"` (\n" +
+                "  `idрежима` varchar(45) NOT NULL,\n" +
+                "  `потребление_ресурса1` double DEFAULT NULL,\n" +
+                "  `потребление_ресурса2` double DEFAULT NULL,\n" +
+                "  `потребление_ресурса3` double DEFAULT NULL,\n" +
+                "  PRIMARY KEY (`idрежима`),\n" +
+                "  UNIQUE KEY `idрежимы_датчик1_UNIQUE` (`idрежима`),\n" +
+                "  KEY `FK_idрежима_д1_idx` (`idрежима`),\n" +
+                "  CONSTRAINT `FK_idрежимы_датчик1_"+articleName+"_"+subsystemName+"_"+deviceName+"` FOREIGN KEY (`idрежима`) REFERENCES `"+deviceName+"_"+articleName+"_"+subsystemName+"` (`режимы`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        int resultState2=execUpdate(subsystemAddQuery);
+        int resultState1=execUpdate(addQuery);
+        int resultState=execUpdate(createQuery);
+        int resultState3=execUpdate(createModeTable);
+        if(resultState==CLASS_NOT_FOUND||resultState1==CLASS_NOT_FOUND||resultState2==CLASS_NOT_FOUND||resultState3==CLASS_NOT_FOUND) {
+            return CLASS_NOT_FOUND;
+        }
+        if(resultState==SQL_EXCEPTION||resultState1==SQL_EXCEPTION||resultState2==SQL_EXCEPTION||resultState3==SQL_EXCEPTION) {
+            return SQL_EXCEPTION;
+        }
+        if(resultState==CLASS_CAST_EXCEPTION||resultState1==CLASS_CAST_EXCEPTION||resultState2==CLASS_CAST_EXCEPTION||resultState3==CLASS_CAST_EXCEPTION) {
+            return CLASS_CAST_EXCEPTION;
+        }
+        return OK;
+    }
+    //lastIndex здесь-индекс датчика
+    int addSensor(String articleName,String subsystemName, String sensorName,Integer lastIndex){
+        lastIndex++;
+        String subsystemAddQuery="INSERT INTO `ка`."+subsystemName+"_"+articleName+" (idподсистема,idдатчика) VALUES('"+subsystemName+"',"+lastIndex+");\n";
+        String addQuery="INSERT INTO `ка`.датчики_"+articleName+"_"+subsystemName+" VALUES("+lastIndex+",'"+sensorName+"');";
+        String createQuery=" CREATE TABLE `ка`.`"+sensorName+"_"+articleName+"_"+subsystemName+"` (\n" +
+                "`idдатчик` varchar(45) DEFAULT NULL,\n" +
+                "  `режимы` varchar(45) NOT NULL,\n" +
+                "  `id` int(11) NOT NULL,\n" +
+                "  PRIMARY KEY (`id`,`режимы`),\n" +
+                "  UNIQUE KEY `id_UNIQUE` (`id`),\n" +
+                "  UNIQUE KEY `режимы_д1_UNIQUE` (`режимы`),\n" +
+                "  KEY `FK_название_датчика_idx_"+articleName+"_"+subsystemName+"_"+sensorName+"+` (`idдатчик`),\n"+
+                "  CONSTRAINT `FK_прибор"+articleName+"_"+subsystemName+"_"+sensorName+"` FOREIGN KEY (`idдатчик`) REFERENCES `датчики_"+articleName+"_"+subsystemName+"` (`название`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        String createModeTable=" CREATE TABLE `ка`.`режимы_"+sensorName+"_"+articleName+"_"+subsystemName+"` (\n" +
+                "  `idрежима` varchar(45) NOT NULL,\n" +
+                "  `потребление_ресурса1` double DEFAULT NULL,\n" +
+                "  `потребление_ресурса2` double DEFAULT NULL,\n" +
+                "  `потребление_ресурса3` double DEFAULT NULL,\n" +
+                "  PRIMARY KEY (`idрежима`),\n" +
+                "  UNIQUE KEY `idрежимы_датчик1_UNIQUE` (`idрежима`),\n" +
+                "  KEY `FK_idрежима_д1_idx` (`idрежима`),\n" +
+                "  CONSTRAINT `FK_idрежимы_датчик1_"+articleName+"_"+subsystemName+"_"+sensorName+"` FOREIGN KEY (`idрежима`) REFERENCES `"+sensorName+"_"+articleName+"_"+subsystemName+"` (`режимы`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+
+        int resultState2=execUpdate(subsystemAddQuery);
+        int resultState1=execUpdate(addQuery);
+        int resultState=execUpdate(createQuery);
+        int resultState3=execUpdate(createModeTable);
+        if(resultState==CLASS_NOT_FOUND||resultState1==CLASS_NOT_FOUND||resultState2==CLASS_NOT_FOUND||resultState3==CLASS_NOT_FOUND) {
+            return CLASS_NOT_FOUND;
+        }
+        if(resultState==SQL_EXCEPTION||resultState1==SQL_EXCEPTION||resultState2==SQL_EXCEPTION||resultState3==SQL_EXCEPTION) {
+            return SQL_EXCEPTION;
+        }
+        if(resultState==CLASS_CAST_EXCEPTION||resultState1==CLASS_CAST_EXCEPTION||resultState2==CLASS_CAST_EXCEPTION||resultState3==CLASS_CAST_EXCEPTION) {
+            return CLASS_CAST_EXCEPTION;
+        }
+        return OK;
+    }
+
+    int addMode(String articleName,String subsystemName,String deviceName,String mode,double modeConsumption1,double modeConsumption2,double modeConsumption3,Integer lastIndex) {
+        //create table with modes,add mode to device and add mode to mode table
+        lastIndex++;
+        String addModeToDeviceQuery="INSERT INTO `ка`."+deviceName+"_"+articleName+"_"+subsystemName+" VALUES ('"+deviceName+"','"+mode+"',"+lastIndex+")";
+
+        String addQuery="INSERT INTO `ка`.`режимы_"+deviceName+"_"+articleName+"_"+subsystemName+"` " +
+                "VALUES('"+mode+"',"+modeConsumption1+","+modeConsumption2+","+modeConsumption3+");";
+        int resultState1=execUpdate(addModeToDeviceQuery);
+        int resultState=execUpdate(addQuery);
+        if(resultState==CLASS_NOT_FOUND||resultState1==CLASS_NOT_FOUND) {
+            return CLASS_NOT_FOUND;
+        }
+        if(resultState==SQL_EXCEPTION||resultState1==SQL_EXCEPTION) {
+            return SQL_EXCEPTION;
+        }
+        if(resultState==CLASS_CAST_EXCEPTION||resultState1==CLASS_CAST_EXCEPTION) {
+            return CLASS_CAST_EXCEPTION;
+        }
+        return OK;
     }
 }
