@@ -164,8 +164,12 @@ public class DB {
             ResultSet resultSet = (ResultSet) resultObject;
             try {
                 while (resultSet.next()) {
-                    device=resultSet.getInt("idприбора");
-                    sensor=resultSet.getInt("idдатчика");
+                    if(resultSet.getInt("idприбора")!=0) {
+                        device = resultSet.getInt("idприбора");
+                    }
+                    if(resultSet.getInt("idдатчика")!=0) {
+                        sensor = resultSet.getInt("idдатчика");
+                    }
                 }
             } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
@@ -692,9 +696,8 @@ public class DB {
         String addQuery="INSERT INTO "+articleName+" VALUES ("+lastIndex+1+",'"+articleName+"','"+subsystemName+"');";
         String createQuery=" CREATE TABLE `ка`.`"+subsystemName+"_"+articleName+"` (\n" +
                 "  `idподсистема` varchar(45) NOT NULL,\n" +
-                "  `idприбора` int(11) NOT NULL DEFAULT 0,\n" +
-                "  `idдатчика` int(11) NOT NULL DEFAULT 0,\n" +
-                "  PRIMARY KEY (`idприбора`,`idдатчика`),\n" +
+                "  `idприбора` int(11) DEFAULT NULL,\n" +
+                "  `idдатчика` int(11) DEFAULT NULL,\n" +
                 "  UNIQUE KEY `idприбора_UNIQUE` (`idприбора`),\n" +
                 "  UNIQUE KEY `idдатчика_UNIQUE` (`idдатчика`),\n" +
                 "  KEY `FK_idподсистема_idx` (`idподсистема`),\n" +

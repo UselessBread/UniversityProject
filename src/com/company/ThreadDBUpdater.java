@@ -399,6 +399,7 @@ implements ActionListener,WindowListener{
     @Override
     public void windowClosing(WindowEvent e) {
         try {
+            Thread.currentThread().interrupt();
             Thread.currentThread().join();
         } catch (InterruptedException e1) {
             System.out.print("ThreadDBUpdater Interrupted Exception");

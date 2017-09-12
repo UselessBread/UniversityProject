@@ -3,6 +3,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Vector;
 
 
@@ -225,6 +226,7 @@ public class NewAlgorithmWindow implements ActionListener{
             historyVector.add(resultTest);
             resultSubsys= resultList.getSelectedValue().toLowerCase();
             resultTest=DBConnection.queryToSubsys(resultArticle,resultSubsys);
+            resultTest.removeIf(Objects::isNull);
             verifyResult(resultTest,listFrame);
             resultList.setListData(resultTest);
             state=QUERY_TO_SUBSYSTEM_HAS_BEEN_DONE;
