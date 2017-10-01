@@ -101,7 +101,8 @@ public class AlgorithmMaker extends JPanel implements ActionListener{
                     String name=nameField.getText();
                     if(name.length()>0){
                         if(compareName(name)) {
-                            int res = DBConnection.saveToDB(name,MainWindow.getSystemInfoVectorForSaving() );
+                            int res=0;
+                            //int res = DBConnection.saveToDB(name,MainWindow.getSystemInfoVectorForSaving() );
                             if (res == DB.CLASS_NOT_FOUND) {
                                 JOptionPane.showMessageDialog(algorithmMakerFrame, "ClassNotFound exception", "ClassNotFound", JOptionPane.ERROR_MESSAGE);
                                 return;

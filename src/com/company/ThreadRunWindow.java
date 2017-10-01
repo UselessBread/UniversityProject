@@ -57,13 +57,13 @@ public class ThreadRunWindow extends Thread {
             SystemInfo usedDevice = MainWindow.getSystemInfoVector().get(index);
             String[] usingMode = usedDevice.getMode().split("\t");
             String[] currentMode = systemInfo.getMode().split("\t");
-            if (currentMode[0].equals("ВЫКЛ")) {
+            if (currentMode[0].trim().toUpperCase().equals("ВЫКЛ")) {
                 //replace with container
                 double prevResourceUsage1 = Double.parseDouble(usingMode[1]);
                 double prevResourceUsage2 = Double.parseDouble(usingMode[2]);
                 double prevResourceUsage3 = Double.parseDouble(usingMode[3]);
                 String resources = resourceMonitor.getText();
-                String[] tempRes = resources.split("\t");
+                String[] tempRes = resources.split(" ");
                 double currentResourceUsage1 = Double.parseDouble(tempRes[0].split("/")[0]);
                 double currentResourceUsage2 = Double.parseDouble(tempRes[1].split("/")[0]);
                 double currentResourceUsage3 = Double.parseDouble(tempRes[2].split("/")[0]);
@@ -73,22 +73,22 @@ public class ThreadRunWindow extends Thread {
                     currentResourceUsage2 = currentResourceUsage2 - prevResourceUsage2;
                 if (currentResourceUsage3 != 0)
                     currentResourceUsage3 = currentResourceUsage3 - prevResourceUsage3;
-                resourceMonitor.setText(currentResourceUsage1 + "/" + allResources.get(0) + "\t" +
-                        currentResourceUsage2 + "/" + allResources.get(1) + "\t" +
+                resourceMonitor.setText(currentResourceUsage1 + "/" + allResources.get(0) + " " +
+                        currentResourceUsage2 + "/" + allResources.get(1) + " " +
                         currentResourceUsage3 + "/" + allResources.get(2));
             }
         }
         if (!usingDevices.contains(systemInfo.getInfoWithoutDelayAndMode())) {//else replacement
             String[] currentMode = systemInfo.getMode().split("\t");
-            String[] tempResources = resourceMonitor.getText().split("\t");
+            String[] tempResources = resourceMonitor.getText().split(" ");
             double tempUsage1 = Double.parseDouble(tempResources[0].split("/")[0]);
             double tempUsage2 = Double.parseDouble(tempResources[1].split("/")[0]);
             double tempUsage3 = Double.parseDouble(tempResources[2].split("/")[0]);
             double currentResourceUsage1 = Double.parseDouble(currentMode[1]) + tempUsage1;
             double currentResourceUsage2 = Double.parseDouble(currentMode[2]) + tempUsage2;
             double currentResourceUsage3 = Double.parseDouble(currentMode[3]) + tempUsage3;
-            resourceMonitor.setText(currentResourceUsage1 + "/" + allResources.get(0) + "\t" +
-                    currentResourceUsage2 + "/" + allResources.get(1) + "\t" +
+            resourceMonitor.setText(currentResourceUsage1 + "/" + allResources.get(0) + " " +
+                    currentResourceUsage2 + "/" + allResources.get(1) + " " +
                     currentResourceUsage3 + "/" + allResources.get(2));
 
         }

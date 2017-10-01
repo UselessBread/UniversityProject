@@ -10,95 +10,115 @@ import java.util.Vector;
 
 
 public class DB {
-    static  final int CLASS_NOT_FOUND=-11;
-    static  final int SQL_EXCEPTION=-12;
-    static  final int CLASS_CAST_EXCEPTION=-13;
-    static  final int OK=12;
-    private int subsystemNumber,deviceOrSensorNumber;
+    static final int CLASS_NOT_FOUND = -11;
+    static final int SQL_EXCEPTION = -12;
+    static final int CLASS_CAST_EXCEPTION = -13;
+    static final int OK = 12;
+    private final String url = "jdbc:mysql://127.0.0.1:3306/ка";
+    private final String user = "root";
+    private final String password = "5986";
     private Connection connection = null;
     private Statement statement = null;
     private Savepoint savepoint;
     int state;
 
     DB() {
-        String url = "jdbc:mysql://127.0.0.1:3306/ка";
-        String user = "root";
-        String password = "5986";
-        state=connect(url,user,password);
+        state = connect(url, user, password);
     }
 
-    private int connect(String url,String user, String password) {
+    private int connect(String url, String user, String password) {
         try {
             Class.forName("com.mysql.jdbc.Driver");
             connection = DriverManager.getConnection(url, user, password);
             statement = connection.createStatement();
         } catch (ClassNotFoundException ex) {
-           return CLASS_NOT_FOUND;
+            return CLASS_NOT_FOUND;
         } catch (SQLException SQLExc) {
             return SQL_EXCEPTION;
         }
         return OK;
     }
-    private Object execQuery(String query){
+    public int connect(){
         try {
-           return statement.executeQuery(query);
-        }catch (SQLException exc){return SQL_EXCEPTION;}
+            Class.forName("com.mysql.jdbc.Driver");
+            connection = DriverManager.getConnection(url, user, password);
+            statement = connection.createStatement();
+        } catch (ClassNotFoundException ex) {
+            return CLASS_NOT_FOUND;
+        } catch (SQLException SQLExc) {
+            return SQL_EXCEPTION;
+        }
+        return OK;
     }
-    public Vector<String> firstQuery(){
-        Vector<String> sVec=new Vector<>();
-        String query="SELECT * FROM подсистемы";
-        Object resultObject=execQuery(query);
-        if(verifyResult(resultObject)==OK){
-            try{
-                ResultSet resultSet=(ResultSet)resultObject;
-                while(resultSet.next()){
-                    sVec.add("Подсистема"+resultSet.getString("idподсистемы"));
+    public void disconnect(){
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Object execQuery(String query) {
+        try {
+            return statement.executeQuery(query);
+        } catch (SQLException exc) {
+            return SQL_EXCEPTION;
+        }
+    }
+
+    public Vector<String> firstQuery() {
+        Vector<String> sVec = new Vector<>();
+        String query = "SELECT * FROM подсистемы";
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    sVec.add("Подсистема" + resultSet.getString("idподсистемы"));
                 }
-            }catch (SQLException SQLexc){
+            } catch (SQLException SQLexc) {
                 sVec.add(Integer.toString(SQL_EXCEPTION));
                 return sVec;
             }
-        }
-        else if(verifyResult(resultObject)==CLASS_NOT_FOUND){
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             sVec.add(Integer.toString(CLASS_NOT_FOUND));
             return sVec;
-        }
-        else if(verifyResult(resultObject)==SQL_EXCEPTION){
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
             sVec.add(Integer.toString(SQL_EXCEPTION));
             return sVec;
-        }
-        else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
             sVec.add(Integer.toString(CLASS_CAST_EXCEPTION));
             return sVec;
         }
         return sVec;
     }
-    private int verifyResult(Object resultObject){
+
+    private int verifyResult(Object resultObject) {
         try {
             int resultInt = (int) resultObject;
 
-            if(resultInt== DB.CLASS_NOT_FOUND){
-                return  CLASS_NOT_FOUND;
-            }
-            else if(resultInt== DB.SQL_EXCEPTION){
-                return  SQL_EXCEPTION;
+            if (resultInt == DB.CLASS_NOT_FOUND) {
+                return CLASS_NOT_FOUND;
+            } else if (resultInt == DB.SQL_EXCEPTION) {
+                return SQL_EXCEPTION;
             }
             return OK;
-        }catch (ClassCastException classCastExc){
+        } catch (ClassCastException classCastExc) {
             return OK;
         }
     }
+
     //article=изделие_№, selectedItem-выбранная подсистема
-    Vector<String> queryToSubsys(String article,String selectedItem) {
-        Vector<String> stringVector=new Vector<>();
+    Vector<String> queryToSubsys(String article, String selectedItem) {
+        Vector<String> stringVector = new Vector<>();
         String query = "SELECT название,idприбор_for\n" +
                 "FROM ка.изделия\n" +
-                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
-                "inner join "+selectedItem+"_"+article+" on "+article+".подсистемы="+selectedItem+"_"+article+".idподсистема\n" +
-                "left join приборы_"+article+"_"+selectedItem+" on "+selectedItem+"_"+article+".idприбора=приборы_"+article+"_"+selectedItem+".idприборы\n" +
-                "left join датчики_"+article+"_"+selectedItem+" on "+selectedItem+"_"+article+".idдатчика=датчики_"+article+"_"+selectedItem+".idдатчики";
+                "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
+                "inner join " + selectedItem + "_" + article + " on " + article + ".подсистемы=" + selectedItem + "_" + article + ".idподсистема\n" +
+                "left join приборы_" + article + "_" + selectedItem + " on " + selectedItem + "_" + article + ".idприбора=приборы_" + article + "_" + selectedItem + ".idприборы\n" +
+                "left join датчики_" + article + "_" + selectedItem + " on " + selectedItem + "_" + article + ".idдатчика=датчики_" + article + "_" + selectedItem + ".idдатчики";
         Object resultObject = execQuery(query);
-        if (verifyResult(resultObject)==OK) {
+        if (verifyResult(resultObject) == OK) {
             ResultSet resultSet = (ResultSet) resultObject;
             try {
                 while (resultSet.next()) {
@@ -109,31 +129,28 @@ public class DB {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
                 return stringVector;
             }
-        }
-        else if(verifyResult(resultObject)==CLASS_NOT_FOUND){
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
             return stringVector;
-        }
-        else if(verifyResult(resultObject)==SQL_EXCEPTION){
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
             stringVector.add(Integer.toString(SQL_EXCEPTION));
             return stringVector;
-        }
-        else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
             stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
             return stringVector;
         }
         return stringVector;
     }
-    Vector<String> queryToSubsys(String article,String selectedItem,ArrayList<Integer> lastIndex) {
-        Vector<String> stringVector=new Vector<>();
+    Vector<String> queryToSubsys(String article, String selectedItem, ArrayList<Integer> lastIndex) {
+        Vector<String> stringVector = new Vector<>();
         String query = "SELECT название,idприбор_for\n" +
                 "FROM ка.изделия\n" +
-                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
-                "inner join "+selectedItem+"_"+article+" on "+article+".подсистемы="+selectedItem+"_"+article+".idподсистема\n" +
-                "inner join приборы_"+article+"_"+selectedItem+" on "+selectedItem+"_"+article+".idприбора=приборы_"+article+"_"+selectedItem+".idприборы\n" +
-                "inner join датчики_"+article+"_"+selectedItem+" on "+selectedItem+"_"+article+".idдатчика=датчики_"+article+"_"+selectedItem+".idдатчики";
+                "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
+                "inner join " + selectedItem + "_" + article + " on " + article + ".подсистемы=" + selectedItem + "_" + article + ".idподсистема\n" +
+                "inner join приборы_" + article + "_" + selectedItem + " on " + selectedItem + "_" + article + ".idприбора=приборы_" + article + "_" + selectedItem + ".idприборы\n" +
+                "inner join датчики_" + article + "_" + selectedItem + " on " + selectedItem + "_" + article + ".idдатчика=датчики_" + article + "_" + selectedItem + ".idдатчики";
         Object resultObject = execQuery(query);
-        if (verifyResult(resultObject)==OK) {
+        if (verifyResult(resultObject) == OK) {
             ResultSet resultSet = (ResultSet) resultObject;
             try {
                 while (resultSet.next()) {
@@ -144,30 +161,27 @@ public class DB {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
                 return stringVector;
             }
-        }
-        else if(verifyResult(resultObject)==CLASS_NOT_FOUND){
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
             return stringVector;
-        }
-        else if(verifyResult(resultObject)==SQL_EXCEPTION){
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
             stringVector.add(Integer.toString(SQL_EXCEPTION));
             return stringVector;
-        }
-        else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
             stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
             return stringVector;
         }
-        String lasIndexQuery="SELECT idприбора,idдатчика FROM `ка`.`"+selectedItem+"_"+article+"`;";
+        String lasIndexQuery = "SELECT idприбора,idдатчика FROM `ка`.`" + selectedItem + "_" + article + "`;";
         resultObject = execQuery(lasIndexQuery);
-        int device=0,sensor=0;
-        if (verifyResult(resultObject)==OK) {
+        int device = 0, sensor = 0;
+        if (verifyResult(resultObject) == OK) {
             ResultSet resultSet = (ResultSet) resultObject;
             try {
                 while (resultSet.next()) {
-                    if(resultSet.getInt("idприбора")!=0) {
+                    if (resultSet.getInt("idприбора") != 0) {
                         device = resultSet.getInt("idприбора");
                     }
-                    if(resultSet.getInt("idдатчика")!=0) {
+                    if (resultSet.getInt("idдатчика") != 0) {
                         sensor = resultSet.getInt("idдатчика");
                     }
                 }
@@ -177,16 +191,13 @@ public class DB {
             }
             lastIndex.add(device);
             lastIndex.add(sensor);
-        }
-        else if(verifyResult(resultObject)==CLASS_NOT_FOUND){
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
             return stringVector;
-        }
-        else if(verifyResult(resultObject)==SQL_EXCEPTION){
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
             stringVector.add(Integer.toString(SQL_EXCEPTION));
             return stringVector;
-        }
-        else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
             stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
             return stringVector;
         }
@@ -249,23 +260,22 @@ public class DB {
     }
 
     Vector<String> queryToArticle(String prevQueryResult) {
-        String query="SELECT подсистемы\n" +
+        String query = "SELECT подсистемы\n" +
                 "FROM ка.изделия\n" +
-                "inner join "+prevQueryResult+" on изделия.имя_изделия="+prevQueryResult+".имя;";
-        Vector<String> stringVector=new Vector<>();
-        Object resultObject=execQuery(query);
-        if(verifyResult(resultObject)==OK){
-            try{
-                ResultSet resultSet=(ResultSet)resultObject;
-                while(resultSet.next()){
+                "inner join " + prevQueryResult + " on изделия.имя_изделия=" + prevQueryResult + ".имя;";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
                     stringVector.add(resultSet.getString("подсистемы"));
                 }
-            }catch(SQLException SQLexc){
+            } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
-                return  stringVector;
+                return stringVector;
             }
-        }
-        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
             return stringVector;
         } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
@@ -278,29 +288,28 @@ public class DB {
         return stringVector;
 
     }
-    Vector<String> queryToArticle(String prevQueryResult,ArrayList<Integer> lastIndex) {
-        String query="SELECT "+prevQueryResult+".id,подсистемы\n" +
+    Vector<String> queryToArticle(String prevQueryResult, ArrayList<Integer> lastIndex) {
+        String query = "SELECT " + prevQueryResult + ".id,подсистемы\n" +
                 "FROM ка.изделия\n" +
-                "inner join "+prevQueryResult+" on изделия.имя_изделия="+prevQueryResult+".имя;";
-        Vector<String> stringVector=new Vector<>();
-        Object resultObject=execQuery(query);
-        if(verifyResult(resultObject)==OK){
-            try{
-                ResultSet resultSet=(ResultSet)resultObject;
-                while(resultSet.next()){
+                "inner join " + prevQueryResult + " on изделия.имя_изделия=" + prevQueryResult + ".имя;";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
                     stringVector.add(resultSet.getString("подсистемы"));
                     lastIndex.clear();
                     lastIndex.add(resultSet.getInt("id"));
                 }
-            }catch(SQLException SQLexc){
+            } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
-                return  stringVector;
+                return stringVector;
             }
-            if(lastIndex.size()==0){
+            if (lastIndex.size() == 0) {
                 lastIndex.add(0);
             }
-        }
-        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
             return stringVector;
         } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
@@ -313,30 +322,30 @@ public class DB {
         return stringVector;
 
     }
+
     //selectedItem- имя выбранного прибора
-    Vector<String> queryToDevice(String article,String subsystem,String selectedItem){
-        String query="SELECT idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+    Vector<String> queryToDevice(String article, String subsystem, String selectedItem) {
+        String query = "SELECT idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
                 "FROM ка.изделия\n" +
-                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
-                "inner join "+subsystem+"_"+article+" on "+article+".подсистемы="+subsystem+"_"+article+".idподсистема\n" +
-                "left join приборы_"+article+"_"+subsystem+" on "+subsystem+"_"+article+".idприбора=приборы_"+article+"_"+subsystem+".idприборы\n" +
-                "inner join "+selectedItem+"_"+article+"_"+subsystem+" on приборы_"+article+"_"+subsystem+".idприбор_for="+selectedItem+"_"+article+"_"+subsystem+".idприбор\n" +
-                "inner join режимы_"+selectedItem+"_"+article+"_"+subsystem+" on "+selectedItem+"_"+article+"_"+subsystem+".режимы=режимы_"+selectedItem+"_"+article+"_"+subsystem+".idрежима;";
-        Vector<String> stringVector=new Vector<>();
-        Object resultObject=execQuery(query);
-        if(verifyResult(resultObject)==OK){
-            try{
-                ResultSet resultSet=(ResultSet)resultObject;
-                while(resultSet.next()){
-                    stringVector.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
-                            resultSet.getString("потребление_ресурса2")+"\t"+ resultSet.getString("потребление_ресурса3"));
+                "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
+                "inner join " + subsystem + "_" + article + " on " + article + ".подсистемы=" + subsystem + "_" + article + ".idподсистема\n" +
+                "left join приборы_" + article + "_" + subsystem + " on " + subsystem + "_" + article + ".idприбора=приборы_" + article + "_" + subsystem + ".idприборы\n" +
+                "inner join " + selectedItem + "_" + article + "_" + subsystem + " on приборы_" + article + "_" + subsystem + ".idприбор_for=" + selectedItem + "_" + article + "_" + subsystem + ".idприбор\n" +
+                "inner join режимы_" + selectedItem + "_" + article + "_" + subsystem + " on " + selectedItem + "_" + article + "_" + subsystem + ".режимы=режимы_" + selectedItem + "_" + article + "_" + subsystem + ".idрежима;";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    stringVector.add(resultSet.getString("idрежима") + "\t" + resultSet.getString("потребление_ресурса1") + "\t" +
+                            resultSet.getString("потребление_ресурса2") + "\t" + resultSet.getString("потребление_ресурса3"));
                 }
-            }catch(SQLException SQLexc){
+            } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
-                return  stringVector;
+                return stringVector;
             }
-        }
-        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
             return stringVector;
         } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
@@ -348,34 +357,33 @@ public class DB {
         }
         return stringVector;
     }
-    Vector<String> queryToDevice(String article,String subsystem,String selectedItem,ArrayList<Integer> lastIndex){
-        String query="SELECT `"+selectedItem+"_"+article+"_"+subsystem+"`.`id`,idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+    Vector<String> queryToDevice(String article, String subsystem, String selectedItem, ArrayList<Integer> lastIndex) {
+        String query = "SELECT `" + selectedItem + "_" + article + "_" + subsystem + "`.`id`,idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
                 "FROM ка.изделия\n" +
-                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
-                "inner join "+subsystem+"_"+article+" on "+article+".подсистемы="+subsystem+"_"+article+".idподсистема\n" +
-                "left join приборы_"+article+"_"+subsystem+" on "+subsystem+"_"+article+".idприбора=приборы_"+article+"_"+subsystem+".idприборы\n" +
-                "inner join "+selectedItem+"_"+article+"_"+subsystem+" on приборы_"+article+"_"+subsystem+".idприбор_for="+selectedItem+"_"+article+"_"+subsystem+".idприбор\n" +
-                "inner join режимы_"+selectedItem+"_"+article+"_"+subsystem+" on "+selectedItem+"_"+article+"_"+subsystem+".режимы=режимы_"+selectedItem+"_"+article+"_"+subsystem+".idрежима;";
-        Vector<String> stringVector=new Vector<>();
-        Object resultObject=execQuery(query);
-        if(verifyResult(resultObject)==OK){
-            try{
-                ResultSet resultSet=(ResultSet)resultObject;
-                while(resultSet.next()){
-                    stringVector.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
-                            resultSet.getString("потребление_ресурса2")+"\t"+ resultSet.getString("потребление_ресурса3"));
+                "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
+                "inner join " + subsystem + "_" + article + " on " + article + ".подсистемы=" + subsystem + "_" + article + ".idподсистема\n" +
+                "left join приборы_" + article + "_" + subsystem + " on " + subsystem + "_" + article + ".idприбора=приборы_" + article + "_" + subsystem + ".idприборы\n" +
+                "inner join " + selectedItem + "_" + article + "_" + subsystem + " on приборы_" + article + "_" + subsystem + ".idприбор_for=" + selectedItem + "_" + article + "_" + subsystem + ".idприбор\n" +
+                "inner join режимы_" + selectedItem + "_" + article + "_" + subsystem + " on " + selectedItem + "_" + article + "_" + subsystem + ".режимы=режимы_" + selectedItem + "_" + article + "_" + subsystem + ".idрежима;";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    stringVector.add(resultSet.getString("idрежима") + "\t" + resultSet.getString("потребление_ресурса1") + "\t" +
+                            resultSet.getString("потребление_ресурса2") + "\t" + resultSet.getString("потребление_ресурса3"));
                     lastIndex.clear();
                     lastIndex.add(resultSet.getInt("id"));
                 }
-            }catch(SQLException SQLexc){
+            } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
-                return  stringVector;
+                return stringVector;
             }
-            if(lastIndex.size()==0){
+            if (lastIndex.size() == 0) {
                 lastIndex.add(0);
             }
-        }
-        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
             return stringVector;
         } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
@@ -387,30 +395,30 @@ public class DB {
         }
         return stringVector;
     }
+
     //selectedItem- имя выбранного датчика
-    Vector<String> queryToSensor(String article,String subsystem,String selectedItem){
-        String query="SELECT idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+    Vector<String> queryToSensor(String article, String subsystem, String selectedItem) {
+        String query = "SELECT idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
                 "FROM ка.изделия\n" +
-                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
-                "inner join "+subsystem+"_"+article+" on "+article+".подсистемы="+subsystem+"_"+article+".idподсистема\n" +
-                "left join датчики_"+article+"_"+subsystem+" on "+subsystem+"_"+article+".idдатчика=датчики_"+article+"_"+subsystem+".idдатчики\n" +
-                "inner join "+selectedItem+"_"+article+"_"+subsystem+" on датчики_"+article+"_"+subsystem+".название="+selectedItem+"_"+article+"_"+subsystem+".idдатчик\n" +
-                "inner join режимы_"+selectedItem+"_"+article+"_"+subsystem+" on "+selectedItem+"_"+article+"_"+subsystem+".режимы=режимы_"+selectedItem+"_"+article+"_"+subsystem+".idрежима;";
-        Vector<String> stringVector=new Vector<>();
-        Object resultObject=execQuery(query);
-        if(verifyResult(resultObject)==OK){
-            try{
-                ResultSet resultSet=(ResultSet)resultObject;
-                while(resultSet.next()){
-                    stringVector.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
-                            resultSet.getString("потребление_ресурса2")+"\t"+ resultSet.getString("потребление_ресурса3"));
+                "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
+                "inner join " + subsystem + "_" + article + " on " + article + ".подсистемы=" + subsystem + "_" + article + ".idподсистема\n" +
+                "left join датчики_" + article + "_" + subsystem + " on " + subsystem + "_" + article + ".idдатчика=датчики_" + article + "_" + subsystem + ".idдатчики\n" +
+                "inner join " + selectedItem + "_" + article + "_" + subsystem + " on датчики_" + article + "_" + subsystem + ".название=" + selectedItem + "_" + article + "_" + subsystem + ".idдатчик\n" +
+                "inner join режимы_" + selectedItem + "_" + article + "_" + subsystem + " on " + selectedItem + "_" + article + "_" + subsystem + ".режимы=режимы_" + selectedItem + "_" + article + "_" + subsystem + ".idрежима;";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    stringVector.add(resultSet.getString("idрежима") + "\t" + resultSet.getString("потребление_ресурса1") + "\t" +
+                            resultSet.getString("потребление_ресурса2") + "\t" + resultSet.getString("потребление_ресурса3"));
                 }
-            }catch(SQLException SQLexc){
+            } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
-                return  stringVector;
+                return stringVector;
             }
-        }
-        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
             return stringVector;
         } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
@@ -422,34 +430,33 @@ public class DB {
         }
         return stringVector;
     }
-    Vector<String> queryToSensor(String article,String subsystem,String selectedItem,ArrayList<Integer> lastIndex){
-        String query="SELECT `"+selectedItem+"_"+article+"_"+subsystem+"`.`id`,idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+    Vector<String> queryToSensor(String article, String subsystem, String selectedItem, ArrayList<Integer> lastIndex) {
+        String query = "SELECT `" + selectedItem + "_" + article + "_" + subsystem + "`.`id`,idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
                 "FROM ка.изделия\n" +
-                "inner join "+article+" on изделия.имя_изделия="+article+".имя\n" +
-                "inner join "+subsystem+"_"+article+" on "+article+".подсистемы="+subsystem+"_"+article+".idподсистема\n" +
-                "left join датчики_"+article+"_"+subsystem+" on "+subsystem+"_"+article+".idдатчика=датчики_"+article+"_"+subsystem+".idдатчики\n" +
-                "inner join "+selectedItem+"_"+article+"_"+subsystem+" on датчики_"+article+"_"+subsystem+".название="+selectedItem+"_"+article+"_"+subsystem+".idдатчик\n" +
-                "inner join режимы_"+selectedItem+"_"+article+"_"+subsystem+" on "+selectedItem+"_"+article+"_"+subsystem+".режимы=режимы_"+selectedItem+"_"+article+"_"+subsystem+".idрежима;";
-        Vector<String> stringVector=new Vector<>();
-        Object resultObject=execQuery(query);
-        if(verifyResult(resultObject)==OK){
-            try{
-                ResultSet resultSet=(ResultSet)resultObject;
-                while(resultSet.next()){
-                    stringVector.add(resultSet.getString("idрежима")+"\t"+resultSet.getString("потребление_ресурса1")+"\t"+
-                            resultSet.getString("потребление_ресурса2")+"\t"+ resultSet.getString("потребление_ресурса3"));
+                "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
+                "inner join " + subsystem + "_" + article + " on " + article + ".подсистемы=" + subsystem + "_" + article + ".idподсистема\n" +
+                "left join датчики_" + article + "_" + subsystem + " on " + subsystem + "_" + article + ".idдатчика=датчики_" + article + "_" + subsystem + ".idдатчики\n" +
+                "inner join " + selectedItem + "_" + article + "_" + subsystem + " on датчики_" + article + "_" + subsystem + ".название=" + selectedItem + "_" + article + "_" + subsystem + ".idдатчик\n" +
+                "inner join режимы_" + selectedItem + "_" + article + "_" + subsystem + " on " + selectedItem + "_" + article + "_" + subsystem + ".режимы=режимы_" + selectedItem + "_" + article + "_" + subsystem + ".idрежима;";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    stringVector.add(resultSet.getString("idрежима") + "\t" + resultSet.getString("потребление_ресурса1") + "\t" +
+                            resultSet.getString("потребление_ресурса2") + "\t" + resultSet.getString("потребление_ресурса3"));
                     lastIndex.clear();
                     lastIndex.add(resultSet.getInt("id"));
                 }
-            }catch(SQLException SQLexc){
+            } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
-                return  stringVector;
+                return stringVector;
             }
-            if(lastIndex.size()==0){
+            if (lastIndex.size() == 0) {
                 lastIndex.add(0);
             }
-        }
-        else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
             return stringVector;
         } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
@@ -458,6 +465,45 @@ public class DB {
         } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
             stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
             return stringVector;
+        }
+        return stringVector;
+    }
+
+    Vector<String> getDeviceNames(String articleName, String subsystemName) {
+        String query = "SELECT idприбор_for\n" +
+                "FROM " + subsystemName + "_" + articleName + "\n" +
+                "INNER JOIN приборы_" + articleName + "_" + subsystemName + " ON " + subsystemName + "_" + articleName + ".idприбора=приборы_" + articleName + "_" + subsystemName + ".idприборы";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    stringVector.add(resultSet.getString("idприбор_for"));
+                }
+            } catch (SQLException SQLexc) {
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return stringVector;
+            }
+        }
+        return stringVector;
+    }
+    Vector<String> getSensorNames(String articleName,String subsystemName){
+        String query="SELECT  название\n" +
+                "FROM "+subsystemName+"_"+articleName+"\n" +
+                "INNER JOIN датчики_"+articleName+"_"+subsystemName+" ON "+subsystemName+"_"+articleName+".idдатчика=датчики_"+articleName+"_"+subsystemName+".idдатчики";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    stringVector.add(resultSet.getString("название"));
+                }
+            } catch (SQLException SQLexc) {
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return stringVector;
+            }
         }
         return stringVector;
     }
@@ -478,8 +524,8 @@ public class DB {
             return SQL_EXCEPTION;
         }
     }
-    int saveToDB(String name,Vector<SystemInfo> systemInfoVector){
-        String query="CREATE TABLE `ка`.`"+name+"` (\n" +
+    int saveToDB(String article,String name,Vector<SystemInfo> systemInfoVector){
+        String query="CREATE TABLE `ка`.`"+name+"_"+article+"` (\n" +
                 "  `id` INT NOT NULL AUTO_INCREMENT,\n" +
                 "  `изделие` VARCHAR(45) NULL,\n" +
                 "  `подсистема` VARCHAR(45) NULL,\n" +
@@ -491,21 +537,24 @@ public class DB {
                 "  UNIQUE INDEX `idname_UNIQUE` (`id` ASC))\n" +
                 "ENGINE = InnoDB\n" +
                 "DEFAULT CHARACTER SET = utf8;\n";
+        String addQuery="INSERT INTO "+article+"_алгоритмы(`имя_алгоритма`) VALUES('"+name+"');";
+        int result1=execUpdate(addQuery);
         int result=execUpdate(query);
 
         int verRes=verifyResult(result);
-        if(verRes==CLASS_NOT_FOUND) {
+        int verRes1=verifyResult(result1);
+        if(verRes==CLASS_NOT_FOUND||verRes1==CLASS_NOT_FOUND) {
             return CLASS_NOT_FOUND;
         }
-        if(verRes==SQL_EXCEPTION) {
+        if(verRes==SQL_EXCEPTION||verRes1==SQL_EXCEPTION) {
             return SQL_EXCEPTION;
         }
-        if(verRes==CLASS_CAST_EXCEPTION) {
+        if(verRes==CLASS_CAST_EXCEPTION||verRes1==CLASS_CAST_EXCEPTION) {
             return CLASS_CAST_EXCEPTION;
         }
         for(SystemInfo systemInfo:systemInfoVector){
 
-            String insertQuery="INSERT INTO `ка`.`"+name+"` (`изделие`,`подсистема`,`устройство`,`режим`,`задержка`,`отношение`)\n"+
+            String insertQuery="INSERT INTO `ка`.`"+name+"_"+article+"` (`изделие`,`подсистема`,`устройство`,`режим`,`задержка`,`отношение`)\n"+
                     "VALUES('"+systemInfo.getArticle()+"','"+systemInfo.getSubsystem()+"','"+systemInfo.getDeviceName()+"','"+systemInfo.getMode()+"','"+systemInfo.getDelay()+"','"+systemInfo.getRelation()+"');";
             result=execUpdate(insertQuery);
             verRes=verifyResult(result);
@@ -646,10 +695,67 @@ public class DB {
         }catch (SQLException ex){}
         return modeNames;
     }
+    Vector<String> queryToAlgorithms(String article){
+        String query="SELECT * FROM "+article+"_алгоритмы";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    stringVector.add(resultSet.getString("имя_алгоритма"));
+                }
+            } catch (SQLException SQLexc) {
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return stringVector;
+            }
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
+        }
+        return stringVector;
+    }
+    Vector<String> getAlgorithmInfo(String article,String algorithmName){
+        String query="SELECT * FROM `ка`.`"+algorithmName+"_"+article+"`;";
+        Vector<String> stringVector = new Vector<>();
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                while (resultSet.next()) {
+                    stringVector.add(resultSet.getString("изделие")+
+                    resultSet.getString("подсистема")+
+                    resultSet.getString("устройство")+
+                    resultSet.getString("режим")+
+                    resultSet.getString("задержка")+
+                    resultSet.getString("отношение"));
+                }
+            } catch (SQLException SQLexc) {
+                stringVector.add(Integer.toString(SQL_EXCEPTION));
+                return stringVector;
+            }
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
+            stringVector.add(Integer.toString(CLASS_NOT_FOUND));
+            return stringVector;
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
+            stringVector.add(Integer.toString(SQL_EXCEPTION));
+            return stringVector;
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
+            stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return stringVector;
+        }
+        return stringVector;
+    }
     //For ThreadDBUpdater
     int addArticle(String articleName,Integer lastIndex){
         lastIndex++;
-        String addQuery="INSERT INTO `ка`.`изделия` VALUES("+lastIndex+",'"+articleName+"');";
+        String addQuery="INSERT INTO `ка`.`изделия`(имя_изделия) VALUES('"+articleName+"');";
         String createQuery=" CREATE TABLE `"+articleName+"` (\n" +
                 "  `id` int(11) NOT NULL,\n" +
                 "  `имя` varchar(45) DEFAULT NULL,\n" +
@@ -660,15 +766,22 @@ public class DB {
                 "  KEY `FK_имя_изделия` (`имя`),\n" +
                 "  CONSTRAINT `FK_имя_изделия_"+articleName+"` FOREIGN KEY (`имя`) REFERENCES `изделия` (`имя_изделия`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8 ";
+        String createAlgQuery=" CREATE TABLE `"+articleName+"_алгоритмы` (\n" +
+                "  `id_алгоритмы` int(11) NOT NULL AUTO_INCREMENT,\n" +
+                "  `имя_алгоритма` varchar(45) DEFAULT NULL,\n" +
+                "  PRIMARY KEY (`id_алгоритмы`),\n" +
+                "  UNIQUE KEY `имя алгоритма_UNIQUE` (`имя_алгоритма`)\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
         int resultState=execUpdate(createQuery);
         int resultState1=execUpdate(addQuery);
-        if(resultState==CLASS_NOT_FOUND||resultState1==CLASS_NOT_FOUND) {
+        int resultState2=execUpdate(createAlgQuery);
+        if(resultState==CLASS_NOT_FOUND||resultState1==CLASS_NOT_FOUND||resultState2==CLASS_NOT_FOUND) {
             return CLASS_NOT_FOUND;
         }
-        if(resultState==SQL_EXCEPTION||resultState1==SQL_EXCEPTION) {
+        if(resultState==SQL_EXCEPTION||resultState1==SQL_EXCEPTION||resultState2==SQL_EXCEPTION) {
             return SQL_EXCEPTION;
         }
-        if(resultState==CLASS_CAST_EXCEPTION||resultState1==CLASS_CAST_EXCEPTION) {
+        if(resultState==CLASS_CAST_EXCEPTION||resultState1==CLASS_CAST_EXCEPTION||resultState2==CLASS_CAST_EXCEPTION) {
             return CLASS_CAST_EXCEPTION;
         }
         return OK;

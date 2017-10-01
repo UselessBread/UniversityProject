@@ -17,7 +17,7 @@ implements ActionListener,WindowListener{
 
     private final static String ADD_ARTICLE_COMMAND ="Добавить изделие";
     private final static String ADD_SUBSYSTEM_TO_EXISTING_COMMAND ="Добавить подсистему к существующему изделию";
-    private final static String ADD_DEVICE_TO_EXISTING_COMMAND ="Добавить устройство к существующему режиму";
+    private final static String ADD_DEVICE_TO_EXISTING_COMMAND ="Добавить бортовую аппаратуру к существующему режиму";
     private final static String ADD_MODE_TO_EXISTING_COMMAND ="Добавить режим к существующему устройству";
     private final static String DEVICE="Устройство";
     private final static String SENSOR="Датчик";
