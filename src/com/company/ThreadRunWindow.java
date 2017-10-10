@@ -3,7 +3,6 @@ package com.company;
 import javax.swing.*;
 import java.util.ArrayList;
 
-import static com.company.AlgorithmMaker.algorithmMakerFrame;
 import static com.company.MainWindow.*;
 
 public class ThreadRunWindow extends Thread {

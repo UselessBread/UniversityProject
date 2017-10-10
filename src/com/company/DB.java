@@ -732,8 +732,8 @@ public class DB {
                     stringVector.add(resultSet.getString("изделие")+
                     resultSet.getString("подсистема")+
                     resultSet.getString("устройство")+
-                    resultSet.getString("режим")+
-                    resultSet.getString("задержка")+
+                    resultSet.getString("режим")+" "+
+                    resultSet.getString("задержка")+" "+
                     resultSet.getString("отношение"));
                 }
             } catch (SQLException SQLexc) {

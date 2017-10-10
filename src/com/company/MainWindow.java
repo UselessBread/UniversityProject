@@ -13,7 +13,6 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -55,12 +54,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
         JButton runButton=new JButton("Запустить");
         runButton.setActionCommand(RUN);
         runButton.addActionListener(this);
-        /*JButton addButton = new JButton("Новый алгоритм");
-        addButton.setActionCommand(NEW_ALGORITHM);
-        addButton.addActionListener(this);
-        JButton openButton = new JButton("Открыть существующий алгоритм");
-        openButton.setActionCommand(OPEN);
-        openButton.addActionListener(this);*/
+
         JButton addToDBButton=new JButton("Добавить");
         addToDBButton.setActionCommand(ADD);
         addToDBButton.addActionListener(this);
@@ -71,15 +65,11 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
         saveButton.setActionCommand(SAVE);
         saveButton.addActionListener(this);
 
-
         JPanel buttonPanel = new JPanel();
-        //buttonPanel.add(addButton);
-        //buttonPanel.add(openButton);
         buttonPanel.add(runButton);
         buttonPanel.add(addToDBButton);
         buttonPanel.add(clearButton);
         buttonPanel.add(saveButton);
-
 
         JSplitPane treeSplitPane=new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         treeSplitPane.setDividerLocation(200);
@@ -93,6 +83,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
         JSplitPane treeWithInfo=new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         treeWithInfo.setTopComponent(treeSplitPane);
         JScrollPane algorithmInfoScrollPane=new JScrollPane(algorithmInfo);
+        algorithmInfoScrollPane.setPreferredSize(new Dimension(950,60));
         treeWithInfo.setBottomComponent(algorithmInfoScrollPane);
 
         JSplitPane splitPane=new JSplitPane();
@@ -116,6 +107,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
         contentPane.setOpaque(true);
         mainFrame.setContentPane(contentPane);
         mainFrame.setLocationRelativeTo(null);
+        mainFrame.setLocation(500,120);
         mainFrame.pack();
         mainFrame.setVisible(true);
 
@@ -146,39 +138,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
             openedAlgorithms.setText("");
             systemInfoVector.clear();
         }
-        if (e.getActionCommand().equals(NEW_ALGORITHM)) {
-            AlgorithmMaker.createWindow();
-        }
-        if (e.getActionCommand().equals(OPEN)) {
-            JList<String> usedNames=new JList<>(getUsedNames());
 
-            JButton confirmButton=new JButton("Выбрать");
-            confirmButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    //Добавляет напрямую в systemInfoVector
-                    DBC.openQuery(usedNames.getSelectedValue());
-                    allResources=DBC.getAllResources();
-                    resourceMonitor.setText(0+"/"+allResources.get(0)+"\t"+
-                            0+"/"+allResources.get(1)+"\t"+
-                            0+"/"+allResources.get(2));
-                    openedAlgorithms.append(usedNames.getSelectedValue()+"\n");
-                    (new ThreadRunWindow()).start();
-                }
-            });
-
-            JPanel mainOpenPanel = new JPanel();
-            mainOpenPanel.add(usedNames);
-            mainOpenPanel.add(confirmButton);
-            mainOpenPanel.setOpaque(true);
-            JFrame openFrame = new JFrame("Открыть");
-            openFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-            openFrame.setLocationRelativeTo(mainOpenPanel);
-            openFrame.setContentPane(mainOpenPanel);
-            openFrame.pack();
-            openFrame.setVisible(true);
-
-        }
         if(e.getActionCommand().equals(ADD)){
             (new ThreadDBUpdater()).start();
         }
@@ -188,19 +148,6 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
         return systemInfoVector;
     }
     static Vector<SystemInfo> getSystemInfoVectorForSaving(){return systemInfoVectorForSaving;}
-    private Vector<String> getUsedNames() {
-        String line;
-        Vector<String> usedNames=new Vector<>();
-        try (BufferedReader bufferedReader = Files.newBufferedReader(AlgorithmMaker.used_namesPath, AlgorithmMaker.charset)) {
-            while ((line = bufferedReader.readLine()) != null) {
-                String[] splitLine=line.split("/");
-                for(String str:splitLine){
-                    usedNames.add(str);
-                }
-            }
-        }catch(IOException e){}
-        return usedNames;
-    }
     private void createTree(DefaultMutableTreeNode top){
         Vector<TopNode> topNodes=createTopNodes(top);
         tree.addMouseListener(this);
@@ -350,7 +297,10 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
                     Vector<String> result=getAlgorithmInfo(splittedPath);
                     algorithmInfo.setText("");
                     for(String str:result){
-                        algorithmInfo.append(str);
+                        //handle with time for algorithm info
+                        SystemInfo systemInfo=new SystemInfo(str.trim());
+                        handleWithTimeForAlgorithmInfo(systemInfo);
+
                     }
                 }
             }
@@ -373,17 +323,9 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
                             //Добавление алгоритма в окно
                             Vector<String> result=getAlgorithmInfo(splittedPath);
                             for(String str:result){
-                                str=str.trim();
-                                String[] splittedStr=str.split(" ");
-                                SystemInfo systemInfo=null;
-                                if(splittedStr.length==4)
-                                    systemInfo=new SystemInfo(splittedStr[0],splittedStr[1],splittedStr[2],splittedStr[3],"","");
-                                if(splittedStr.length==5)
-                                    systemInfo=new SystemInfo(splittedStr[0],splittedStr[1],splittedStr[2],splittedStr[3],splittedStr[4],"");
-                                if(splittedStr.length==6)
-                                systemInfo=new SystemInfo(splittedStr[0],splittedStr[1],splittedStr[2],splittedStr[3],splittedStr[4],splittedStr[5]);
+                                SystemInfo systemInfo=new SystemInfo(str.trim());
                                 systemInfoVector.add(systemInfo);
-                                openedAlgorithms.append(str+"\n");
+                                handleWithTime(systemInfo);
                             }
                         }
                     }
@@ -425,7 +367,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
         if(logContent.length()>1) {
             for (String str : logContentSplit) {
                 String[] tempStr = str.split(" ");
-                deviceToQueueChooser.add(tempStr[3]);
+                deviceToQueueChooser.add(tempStr[2]);
             }
         }
         JComboBox<String>queueChooser = new JComboBox<>(deviceToQueueChooser);
@@ -465,14 +407,14 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
         confirmButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String articleName=splittedPath[1];
-                String subsystemName=splittedPath[3];
-                String deviceName=splittedPath[4];
-                String mode=splittedPath[5].split("]")[0];
+                String articleName=splittedPath[1].trim();
+                String subsystemName=splittedPath[3].trim();
+                String deviceName=splittedPath[4].trim();
+                String mode=splittedPath[5].split("]")[0].trim();
                 if(!delayActivator.isSelected()){
                     SystemInfo systemInfo=new SystemInfo(articleName,subsystemName,deviceName,mode,"","");
                     systemInfoVector.add(systemInfo);
-                    openedAlgorithms.append(articleName+" "+subsystemName+" "+deviceName+" "+mode+"\n");
+                    handleWithTime(systemInfo);
                     delayFrame.dispose();
 
                 }
@@ -480,8 +422,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
                     SystemInfo systemInfo=new SystemInfo(articleName,subsystemName,deviceName,mode,
                             delayField.getText()+delayFormatChooser.getSelectedItem(),(String)queueChooser.getSelectedItem());
                     systemInfoVector.add(systemInfo);
-                    openedAlgorithms.append(articleName+" "+subsystemName+" "+deviceName+" "+mode
-                            +" "+delayField.getText()+" "+delayFormatChooser.getSelectedItem()+ " "+queueChooser.getSelectedItem()+"\n");
+                    handleWithTime(systemInfo);
                     delayFrame.dispose();
                 }
             }
@@ -528,7 +469,8 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
                        DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
                        DefaultMutableTreeNode articleNode=(DefaultMutableTreeNode) treeModel.getPathToRoot(temp)[1];
                        DefaultMutableTreeNode algorithmsNode=(DefaultMutableTreeNode)treeModel.getChild(articleNode,1);
-                       treeModel.insertNodeInto(new DefaultMutableTreeNode(name),algorithmsNode,algorithmsNode.getChildCount());
+                       DefaultMutableTreeNode variantNode=(DefaultMutableTreeNode)treeModel.getChild(algorithmsNode,0);
+                       treeModel.insertNodeInto(new DefaultMutableTreeNode(name),variantNode,variantNode.getChildCount());
                         /*DefaultMutableTreeNode newTop = new DefaultMutableTreeNode("Изделия");
                         tree=new JTree(newTop);
                         createTree(newTop);*/
@@ -567,7 +509,80 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener {
         Vector<String> result=DBC.getAlgorithmInfo(article,algorithm);
         verifyResult(result,mainFrame);
         return result;
-
-
     }
+    private void handleWithTime(SystemInfo systemInfo){
+        try {
+            String text = openedAlgorithms.getText();
+            if(!text.equals("")) {
+                int lines=openedAlgorithms.getLineCount();
+                String lastLine = text.split("\n")[openedAlgorithms.getLineCount()-2];
+                String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c","").trim();
+                int lastTime = Integer.parseInt(lastTimeStr);
+                String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
+                int time = Integer.parseInt(delay[0]);
+                //if delay has been set
+                int newTime = time + lastTime;
+                openedAlgorithms.append("=" + newTime + "c|" + systemInfo.getArticle() +" "+ systemInfo.getSubsystem()+" " +
+                        systemInfo.getDeviceName()+" " + systemInfo.getMode()+ "\n");
+            }
+            else{
+                String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
+                int time = Integer.parseInt(delay[0]);
+                openedAlgorithms.append("="+time+"c|"+systemInfo.getArticle()+" "+systemInfo.getSubsystem()+" "+systemInfo.getDeviceName()+" "+ systemInfo.getMode()+"\n");
+            }
+
+        }catch (NumberFormatException e){
+            //if there is no delay
+            String text=openedAlgorithms.getText();
+            String lastLine;
+            int lastTime;
+            if(!text.isEmpty()) {
+                lastLine = text.split("\n")[openedAlgorithms.getLineCount() - 2];
+                String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c", "").trim();
+                lastTime = Integer.parseInt(lastTimeStr);
+            }
+            else
+                lastTime=0;
+            openedAlgorithms.append("="+lastTime+"c|"+systemInfo.getArticle()+" "+systemInfo.getSubsystem()+" "+ systemInfo.getDeviceName()+" "+ systemInfo.getMode()+"\n");
+        }
+    }
+    private void handleWithTimeForAlgorithmInfo(SystemInfo systemInfo){
+        try {
+            String text = algorithmInfo.getText();
+            if(!text.equals("")) {
+                int lines=algorithmInfo.getLineCount();
+                String lastLine = text.split("\n")[algorithmInfo.getLineCount()-2];
+                String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c","").trim();
+                int lastTime = Integer.parseInt(lastTimeStr);
+                String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
+                int time = Integer.parseInt(delay[0]);
+                //if delay has been set
+                int newTime = time + lastTime;
+                algorithmInfo.append("=" + newTime + "c|" + systemInfo.getArticle() +" "+ systemInfo.getSubsystem()+" "+systemInfo.getDeviceName()+
+                        " "+systemInfo.getMode()+"\n");
+            }
+            else{
+                String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
+                int time = Integer.parseInt(delay[0]);
+                algorithmInfo.append("="+time+"c|"+systemInfo.getArticle()+" "+systemInfo.getSubsystem()+" "+
+                        systemInfo.getDeviceName()+" "+ systemInfo.getMode()+"\n");
+            }
+
+        }catch (NumberFormatException e){
+            //if there is no delay
+            String text=algorithmInfo.getText();
+            String lastLine;
+            int lastTime;
+            if(!text.isEmpty()) {
+                lastLine = text.split("\n")[algorithmInfo.getLineCount() - 2];
+                String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c", "").trim();
+                lastTime = Integer.parseInt(lastTimeStr);
+            }
+            else
+                lastTime=0;
+            algorithmInfo.append("="+lastTime+"c|"+systemInfo.getArticle()+" "+systemInfo.getSubsystem()+" "+
+                    systemInfo.getDeviceName()+" "+ systemInfo.getMode()+"\n");
+        }
+    }
+
 }

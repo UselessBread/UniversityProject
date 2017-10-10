@@ -35,19 +35,12 @@ public class GUI extends JPanel implements ActionListener{
         labelPanel.setVerticalTextPosition(JLabel.CENTER);
         labelPanel.setHorizontalTextPosition(JLabel.CENTER);
 
-        JButton listShowButton=new JButton("Новый алгоритм");
-        listShowButton.setActionCommand(NEW_ALGORITHM);
-        listShowButton.addActionListener(this);
-        JPanel buttonPanel=new JPanel();
-        buttonPanel.add(listShowButton);
-
         JScrollPane logPane=new JScrollPane(log);
         log.setEditable(false);
 
         JPanel main=new JPanel();
         main.setLayout(new BoxLayout(main,BoxLayout.Y_AXIS));
         main.add(labelPanel);
-        main.add(buttonPanel);
         main.add(logPane);
         add(main);
 
@@ -55,7 +48,6 @@ public class GUI extends JPanel implements ActionListener{
 
     @Override
     public void actionPerformed(ActionEvent e){
-        NewAlgorithmWindow algorithmWindow=new NewAlgorithmWindow(e,DBConnection);
 
     }
     static JTextArea getLog(){
