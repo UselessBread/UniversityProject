@@ -121,7 +121,7 @@ implements ActionListener,WindowListener{
         mainPanel.removeAll();
         JList<String> resultList=new JList<>();
         Vector<String> resultTest=DBConnection.queryToArticles();
-        NewAlgorithmWindow.verifyResult(resultTest, DBUpdaterFrame);
+        MainWindow.verifyResult(resultTest, DBUpdaterFrame);
         resultList.setListData(resultTest);
         JButton nextButton=new JButton("Продолжить");
         nextButton.addActionListener(new ActionListener() {
@@ -132,7 +132,7 @@ implements ActionListener,WindowListener{
                 //Использованные имена подсистем
                 Vector<String> result=DBConnection.queryToArticle(selectedArticle,intList);
                 Integer lastIndex=intList.get(0);
-                NewAlgorithmWindow.verifyResult(result,DBUpdaterFrame);
+                MainWindow.verifyResult(result,DBUpdaterFrame);
                 mainPanel.removeAll();
                 JPanel enterPanel=new JPanel();
                 JTextField newSubsystemName=new JTextField(20);
@@ -174,7 +174,7 @@ implements ActionListener,WindowListener{
         mainPanel.removeAll();
         JList<String> resultList=new JList<>();
         Vector<String> resultTest=DBConnection.queryToArticles();
-        NewAlgorithmWindow.verifyResult(resultTest, DBUpdaterFrame);
+        MainWindow.verifyResult(resultTest, DBUpdaterFrame);
         resultList.setListData(resultTest);
         JButton nextButton=new JButton("Продолжить");
         state=QUERY_TO_ARTICLES;
@@ -191,7 +191,7 @@ implements ActionListener,WindowListener{
                         intList.add(0);
                         intList.add(0);
                     }
-                    NewAlgorithmWindow.verifyResult(result,DBUpdaterFrame);
+                    MainWindow.verifyResult(result,DBUpdaterFrame);
                     JPanel enterPanel=new JPanel();
                     //Датчик или устройство
                     String[] checkBoxVariants={DEVICE,SENSOR};
@@ -234,7 +234,7 @@ implements ActionListener,WindowListener{
                 if(state==QUERY_TO_ARTICLES) {
                     selectedArticle = resultList.getSelectedValue().toLowerCase();
                     Vector<String> result = DBConnection.queryToArticle(selectedArticle);
-                    NewAlgorithmWindow.verifyResult(result, DBUpdaterFrame);
+                    MainWindow.verifyResult(result, DBUpdaterFrame);
                     resultList.setListData(result);
                     state=QUERY_TO_ARTICLE;
                 }
@@ -254,7 +254,7 @@ implements ActionListener,WindowListener{
         mainPanel.removeAll();
         JList<String> resultList=new JList<>();
         Vector<String> resultTest=DBConnection.queryToArticles();
-        NewAlgorithmWindow.verifyResult(resultTest, DBUpdaterFrame);
+        MainWindow.verifyResult(resultTest, DBUpdaterFrame);
         resultList.setListData(resultTest);
         JButton nextButton=new JButton("Продолжить");
         state=QUERY_TO_ARTICLES;
@@ -268,7 +268,7 @@ implements ActionListener,WindowListener{
                     if(intList.size()==0){
                         result=DBConnection.queryToSensor(selectedArticle,selectedSubsystem,selectedDevice,intList);
                     }
-                    NewAlgorithmWindow.verifyResult(result,DBUpdaterFrame);
+                    MainWindow.verifyResult(result,DBUpdaterFrame);
                     Integer lastIndex=intList.get(0);
                     Vector<String> nameTest=new Vector<>();
                     for(String str:result){
@@ -283,7 +283,7 @@ implements ActionListener,WindowListener{
                     newModeNameLabel.setLabelFor(newModeName);
                     enterPanel.add(newModeName);
                     enterPanel.add(newModeNameLabel);
-                    Vector<Vector<String>> resourceNamesAndValues=DBConnection.getResourcesCountAndNamesAndMaxValue();
+                    Vector<Vector<String>> resourceNamesAndValues=DBConnection.getResourcesCountAndNamesAndMaxValue(selectedArticle);
                     verifyResult(resourceNamesAndValues);
                     Vector<String> resourceNames=resourceNamesAndValues.get(0);
                     for(int i=0;i<resourceNames.size();++i){
@@ -326,7 +326,7 @@ implements ActionListener,WindowListener{
                 if(state==QUERY_TO_ARTICLE){
                     selectedSubsystem=resultList.getSelectedValue().toLowerCase();
                     Vector<String> result=DBConnection.queryToSubsys(selectedArticle,selectedSubsystem);
-                    NewAlgorithmWindow.verifyResult(result,DBUpdaterFrame);
+                    MainWindow.verifyResult(result,DBUpdaterFrame);
                     resultList.setListData(result);
                     state=QUERY_TO_SUBSYSTEM;
 
@@ -334,7 +334,7 @@ implements ActionListener,WindowListener{
                 if(state==QUERY_TO_ARTICLES) {
                     selectedArticle = resultList.getSelectedValue().toLowerCase();
                     Vector<String> result = DBConnection.queryToArticle(selectedArticle);
-                    NewAlgorithmWindow.verifyResult(result, DBUpdaterFrame);
+                    MainWindow.verifyResult(result, DBUpdaterFrame);
                     resultList.setListData(result);
                     state=QUERY_TO_ARTICLE;
                 }
@@ -399,7 +399,6 @@ implements ActionListener,WindowListener{
     @Override
     public void windowClosing(WindowEvent e) {
         try {
-            Thread.currentThread().interrupt();
             Thread.currentThread().join();
         } catch (InterruptedException e1) {
             System.out.print("ThreadDBUpdater Interrupted Exception");

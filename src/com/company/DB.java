@@ -4,8 +4,14 @@ package com.company;
  * Created by Игорь on 08.08.2017.
  * queryToSensor && queryToDevice should be united
  */
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Vector;
 
 
@@ -632,7 +638,7 @@ public class DB {
         }
         return resultList;
     }
-    Vector<Vector<String>> getResourcesCountAndNamesAndMaxValue() {
+    Vector<Vector<String>> getResourcesCountAndNamesAndMaxValue(String articleName) {
         Vector<String> resourceVector=new Vector<>();
         Vector<String> vectorOfNames=new Vector<>();
         Vector<Vector<String>> resultVector=new Vector<>();
@@ -732,8 +738,8 @@ public class DB {
                     stringVector.add(resultSet.getString("изделие")+
                     resultSet.getString("подсистема")+
                     resultSet.getString("устройство")+
-                    resultSet.getString("режим")+
-                    resultSet.getString("задержка")+
+                    resultSet.getString("режим")+" "+
+                    resultSet.getString("задержка")+" "+
                     resultSet.getString("отношение"));
                 }
             } catch (SQLException SQLexc) {
@@ -751,6 +757,112 @@ public class DB {
             return stringVector;
         }
         return stringVector;
+    }
+    Vector<String> getArticleResources(String articleName){
+        String query="SELECT * FROM `ка`.`"+articleName+"_ресурсы`";
+        Vector<String> resultList=new Vector<>();
+        Object resultObject=execQuery(query);
+        int test=verifyResult(resultObject);
+        if(test==CLASS_NOT_FOUND) {
+            resultList.add(Integer.toString(CLASS_NOT_FOUND));
+            return resultList;
+        }
+        if(test==SQL_EXCEPTION) {
+            resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        if(test==CLASS_CAST_EXCEPTION) {
+            resultList.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return resultList;
+        }
+        ResultSet resultSet=(ResultSet)resultObject;
+        try {
+            while (resultSet.next()) {
+                int i=1;
+                String result=resultSet.getString(i);
+                while(result!=null){
+                    i++;
+                    result=resultSet.getString(i);
+                    resultList.add(result);
+                }
+            }
+        }catch (SQLException sqlE){
+            //resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        return resultList;
+
+    }
+    Vector<String> getArticleResourceNames(String articleName){
+        Vector<String> resultList=new Vector<>();
+        String query="SELECT * FROM `ка`.`"+articleName+"_ресурсы_наименования`";
+        Object resultObject=execQuery(query);
+        int test=verifyResult(resultObject);
+        if(test==CLASS_NOT_FOUND) {
+            resultList.add(Integer.toString(CLASS_NOT_FOUND));
+            return resultList;
+        }
+        if(test==SQL_EXCEPTION) {
+            resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        if(test==CLASS_CAST_EXCEPTION) {
+            resultList.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return resultList;
+        }
+        ResultSet resultSet=(ResultSet)resultObject;
+        try {
+            while (resultSet.next()) {
+                int i=1;
+                String result=resultSet.getString(i);
+                while(result!=null){
+                    i++;
+                    result=resultSet.getString(i);
+                    resultList.add(result);
+                }
+            }
+        }catch (SQLException sqlE){
+            //resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        return resultList;
+    }
+    Vector<String> getUsedArticleResourcesIfEmpty(String articleName){
+        Vector<String> resultVector=new Vector<>();
+        try {
+            BufferedReader reader= Files.newBufferedReader(Paths.get("C:\\Users\\igord\\IdeaProjects\\Prototype v0.3\\src\\com\\company\\used_resources.txt"));
+            String line="";
+            while((line=reader.readLine())!=null){
+                if(line.substring(line.indexOf("<"),line.indexOf(">")).equals(articleName)){
+                    line=line.replace("<"+articleName+">","");
+                    line=line.trim();
+                    String[] splittedLine=line.split("\t");
+                    resultVector.addAll(Arrays.asList(splittedLine));
+                    break;
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return resultVector;
+    }
+    String getUsedArticleResources(String articleName){
+        String line="";
+        try {
+            BufferedReader reader= Files.newBufferedReader(Paths.get("C:\\Users\\igord\\IdeaProjects\\Prototype v0.3\\src\\com\\company\\used_resources.txt"));
+            while((line=reader.readLine())!=null){
+                if(line.substring(line.indexOf("<"),line.indexOf(">")+1).equals("<"+articleName+">")){
+                    line=line.replace("<"+articleName+">","");
+                    line=line.trim();
+                    break;
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return line;
     }
     //For ThreadDBUpdater
     int addArticle(String articleName,Integer lastIndex){

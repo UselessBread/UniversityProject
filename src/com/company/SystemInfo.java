@@ -31,6 +31,26 @@ public class SystemInfo {
         this.delay="";
         this.relation="";
     }
+    SystemInfo(String str){
+        String[] splittedStr=str.split(" ");
+        article=splittedStr[0];
+        subsystem=splittedStr[1];
+        deviceName=splittedStr[2];
+        mode = splittedStr[3];
+        if(splittedStr.length==6) {
+            delay = splittedStr[4];
+            relation = splittedStr[5];
+        }
+        else if(splittedStr.length==5){
+            delay=splittedStr[4];
+            relation="";
+        }
+        else if(splittedStr.length==4){
+            delay="";
+            relation="";
+        }
+
+    }
     SystemInfo(String article,String subsystem,String deviceName,String mode,String delay,String relation){
         this.article=article;
         this.subsystem=subsystem;

@@ -3,7 +3,6 @@ package com.company;
 import javax.swing.*;
 import java.util.ArrayList;
 
-import static com.company.AlgorithmMaker.algorithmMakerFrame;
 import static com.company.MainWindow.*;
 
 public class ThreadRunWindow extends Thread {
@@ -52,6 +51,8 @@ public class ThreadRunWindow extends Thread {
     }
 
     private void recount(SystemInfo systemInfo) {
+        //На основаниии количества элементов массива после сплита текста из минтра русерсов, узнать, сколько ресурсов содержит данное
+        //изделие. Изделие вытащить из systemInfo, найти тэг этого изделия(если не существует, создать запись) и поменять значения занимаемых ресурсов
         if (usingDevices.contains(systemInfo.getInfoWithoutDelayAndMode())) {
             int index = usingDevices.indexOf(systemInfo.getInfoWithoutDelayAndMode());
             SystemInfo usedDevice = MainWindow.getSystemInfoVector().get(index);
@@ -107,5 +108,8 @@ public class ThreadRunWindow extends Thread {
             return delayVal*1000;
         }
         return delayVal;
+    }
+    private void writeToUsedResources(ArrayList<String> usedResources){
+
     }
 }
