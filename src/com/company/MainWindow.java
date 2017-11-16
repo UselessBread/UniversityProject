@@ -19,6 +19,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Vector;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import com.company.NodeClasses.*;
 
 import static java.nio.file.StandardOpenOption.APPEND;
@@ -41,12 +44,13 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
     static JFrame mainFrame;
     private JTextArea openedAlgorithms=new JTextArea(5,30);
     static JTextArea resourceMonitor=new JTextArea(1,30);
-    JTextArea algorithmInfo=new JTextArea(20,20);
+    private JTextArea algorithmInfo=new JTextArea(20,20);
     static ArrayList<Double> allResources;
     private JTree tree;
     private int clicks;
     private boolean dc;
     private ArrayList<String> usingDevices=new ArrayList<>();
+    private ExecutorService executor= Executors.newSingleThreadExecutor();
 
 
 
@@ -148,7 +152,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         }
 
         if(e.getActionCommand().equals(ADD)){
-            (new ThreadDBUpdater()).start();
+            executor.submit(new ThreadDBUpdater());
         }
 
     }
@@ -702,5 +706,9 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static JFrame getMainFrame() {
+        return mainFrame;
     }
 }

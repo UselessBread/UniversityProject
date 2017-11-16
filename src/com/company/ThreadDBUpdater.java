@@ -4,10 +4,7 @@ package com.company;
 import javax.swing.*;
 import javax.swing.text.DefaultEditorKit;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
+import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Vector;
 
@@ -33,6 +30,7 @@ implements ActionListener,WindowListener{
     }
     private void setUI(){
         mainPanel=new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel,BoxLayout.PAGE_AXIS));
         startPanel=new JPanel();
         JRadioButton addArticle=new JRadioButton(ADD_ARTICLE_COMMAND);
         addArticle.setActionCommand(ADD_ARTICLE_COMMAND);
@@ -51,18 +49,20 @@ implements ActionListener,WindowListener{
         radioButtonGroup.add(addSubsystemToExisting);
         radioButtonGroup.add(addDeviceToExisting);
         radioButtonGroup.add(addModeToExisting);
+        startPanel.setLayout(new BoxLayout(startPanel,BoxLayout.Y_AXIS));
         startPanel.add(addArticle);
         startPanel.add(addSubsystemToExisting);
         startPanel.add(addDeviceToExisting);
         startPanel.add(addModeToExisting);
         mainPanel.add(startPanel);
+        mainPanel.setPreferredSize(new Dimension(460,300));
 
         mainPanel.setOpaque(true);
         DBUpdaterFrame =new JFrame("Добавление");
         DBUpdaterFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         DBUpdaterFrame.setContentPane(mainPanel);
         DBUpdaterFrame.addWindowListener(this);
-        DBUpdaterFrame.setLocationRelativeTo(null);
+        DBUpdaterFrame.setLocationRelativeTo(MainWindow.getMainFrame());
         DBUpdaterFrame.pack();
         DBUpdaterFrame.setVisible(true);
 
@@ -77,16 +77,20 @@ implements ActionListener,WindowListener{
     public void actionPerformed(ActionEvent e) {
         if(e.getActionCommand().equals(ADD_ARTICLE_COMMAND)){
             addArticle();
+            updateWindow();
 
         }
         if(e.getActionCommand().equals(ADD_SUBSYSTEM_TO_EXISTING_COMMAND)){
             addSubsystem();
+            updateWindow();
         }
         if(e.getActionCommand().equals(ADD_DEVICE_TO_EXISTING_COMMAND)){
             addDevice();
+            updateWindow();
         }
         if(e.getActionCommand().equals(ADD_MODE_TO_EXISTING_COMMAND)){
             addMode();
+            updateWindow();
         }
     }
     private void addArticle(){
@@ -99,23 +103,87 @@ implements ActionListener,WindowListener{
         JLabel nameLabel=new JLabel("Введите имя нового изделия");
         nameLabel.setLabelFor(newArticleName);
         JButton confirmButton=new JButton("Подтвердить");
+        //Количество ресурсов, их наименования и значения. В зависимости от количества, определенное количество полей
+        JTextField resourcesFieldsCount=new JTextField(5);
+        JLabel resourcesFieldsCountLabel=new JLabel("Количество ресурсов");
+        resourcesFieldsCountLabel.setLabelFor(resourcesFieldsCount);
+        JPanel resourcesPanel=new JPanel();
+        ArrayList<JTextField> resourceTextFields=new ArrayList<>();
+        resourcesFieldsCount.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                resourcesPanel.removeAll();
+                resourceTextFields.clear();
+                int resourcesCount=Integer.parseInt(resourcesFieldsCount.getText());
+                //В зависимостти от числа, добавть поля
+                for(int i=0;i<resourcesCount;i++){
+                    JLabel resourceLabel=new JLabel("Имя ресурса"+(i+1));
+                    JTextField resourceTextField=new JTextField(20);
+                    resourceLabel.setLabelFor(resourceTextField);
+                    resourcesPanel.add(resourceLabel);
+                    resourcesPanel.add(resourceTextField);
+                    JTextField resourceValueField=new JTextField(6);
+                    JLabel resourceValueLabel=new JLabel("Значние ресурса "+(i+1));
+                    resourceValueLabel.setLabelFor(resourceValueField);
+                    //Еденицы измерения
+                    JTextField resourceMeasurment=new JTextField(6);
+                    JLabel resourceMeasurmentLabel=new JLabel("Еденицы измерения");
+                    resourceMeasurmentLabel.setLabelFor(resourceMeasurment);
+
+
+                    resourcesPanel.add(resourceValueLabel);
+                    resourcesPanel.add(resourceValueField);
+                    resourcesPanel.add(resourceMeasurmentLabel);
+                    resourcesPanel.add(resourceMeasurment);
+                    resourceTextFields.add(resourceTextField);
+                    resourceTextFields.add(resourceValueField);
+                    resourceTextFields.add(resourceMeasurment);
+                    updateWindow();
+                }
+            }
+        });
         confirmButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String chosenName=newArticleName.getText();
                 boolean matching=testForMatching(usedArticleNames,chosenName);
                 if(!matching&&!chosenName.isEmpty()){
-                    int result=DBConnection.addArticle(chosenName,lastIndex);
+
+                    ArrayList<String> columns=new ArrayList<>();
+                    ArrayList<Double> columnsValues=new ArrayList<>();
+                    ArrayList<String> valuesMeasurements=new ArrayList<>();
+                    for(int i=0;i<resourceTextFields.size();i+=3){
+                        String columnName=resourceTextFields.get(i).getText();
+                        Double columnValue=Double.parseDouble(resourceTextFields.get(i+1).getText());
+                        String valueMeasurement =resourceTextFields.get(i+2).getText();
+                        columns.add(columnName);
+                        columnsValues.add(columnValue);
+                        valuesMeasurements.add(valueMeasurement);
+
+                    }
+                    int result=DBConnection.addArticle(chosenName,lastIndex,columns,columnsValues,valuesMeasurements);
                     verifyResult(result);
                     resetUI();
                 }
             }
         });
-        enterPanel.add(newArticleName);
         enterPanel.add(nameLabel);
+        enterPanel.add(newArticleName);
         enterPanel.add(confirmButton);
+        enterPanel.add(resourcesFieldsCountLabel);
+        enterPanel.add(resourcesFieldsCount);
         mainPanel.add(enterPanel);
-        DBUpdaterFrame.repaint();
+        mainPanel.add(resourcesPanel);
     }
     private void addSubsystem(){
         mainPanel.removeAll();
@@ -390,6 +458,16 @@ implements ActionListener,WindowListener{
             return;
         }
     }
+    private void updateWindow(){
+        Dimension dimension;
+        if(DBUpdaterFrame.getSize().height<300){
+            dimension=new Dimension(800,DBUpdaterFrame.getSize().height+1);
+        }
+        else {
+            dimension = new Dimension(800, DBUpdaterFrame.getSize().height - 1);
+        }
+        DBUpdaterFrame.setSize(dimension);
+    }
 
     @Override
     public void windowOpened(WindowEvent e) {
@@ -398,12 +476,10 @@ implements ActionListener,WindowListener{
 
     @Override
     public void windowClosing(WindowEvent e) {
-        try {
-            Thread.currentThread().join();
-        } catch (InterruptedException e1) {
-            System.out.print("ThreadDBUpdater Interrupted Exception");
-        }
 
+        MainWindow.getMainFrame().setEnabled(true);
+        DBUpdaterFrame.dispose();
+        Thread.currentThread().interrupt();
     }
 
     @Override
