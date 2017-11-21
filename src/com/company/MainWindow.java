@@ -7,6 +7,7 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
@@ -28,6 +29,7 @@ import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 public class MainWindow extends JPanel implements ActionListener,MouseListener,TreeSelectionListener {
+    private static final String ADD_RESOURCE="Добавить ресурс";
     private final String NEW_ALGORITHM = "Create new algorithm";
     private final String OPEN = "Open algorithm";
     private final String ADD="Add to db";
@@ -46,11 +48,13 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
     static JTextArea resourceMonitor=new JTextArea(1,30);
     private JTextArea algorithmInfo=new JTextArea(20,20);
     static ArrayList<Double> allResources;
-    private JTree tree;
+    private static JTree tree;
     private int clicks;
     private boolean dc;
     private ArrayList<String> usingDevices=new ArrayList<>();
     private ExecutorService executor= Executors.newSingleThreadExecutor();
+    JPopupMenu popupMenu=new JPopupMenu();
+    private static int popupX,popupY;
 
 
 
@@ -78,7 +82,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         saveButton.addActionListener(this);
 
         JPanel buttonPanel = new JPanel();
-        buttonPanel.add(runButton);
+        //buttonPanel.add(runButton);
         buttonPanel.add(addToDBButton);
         buttonPanel.add(clearButton);
         buttonPanel.add(saveButton);
@@ -110,6 +114,11 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         mainPanel.add(treeWithInfo);
 
         add(mainPanel);
+        PopupActionListener popupActionListener=new PopupActionListener();
+        JMenuItem menuItem=new JMenuItem("Добавить ресурс");
+        popupMenu.add(menuItem);
+        menuItem.addActionListener(popupActionListener);
+        menuItem.setActionCommand(ADD_RESOURCE);
     }
 
     static void createAndShowGUI() {
@@ -147,6 +156,13 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             }
         }
         if(e.getActionCommand().equals(CLEAR)){
+            try {
+                BufferedWriter writer=Files.newBufferedWriter(usedResourcesPath,TRUNCATE_EXISTING);
+                writer.close();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+
             openedAlgorithms.setText("");
             systemInfoVector.clear();
         }
@@ -186,18 +202,31 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
     }
     private Vector<SubsystemNode> createSubsystemLeaves(Vector<TopNode> topNodes){
         Vector<SubsystemNode> subsystemNodes=new Vector<>();
-        for(TopNode topNode:topNodes){
-            DefaultMutableTreeNode systemNode=new DefaultMutableTreeNode("Системы");
+        for(TopNode topNode:topNodes) {
+            DefaultMutableTreeNode systemNode = new DefaultMutableTreeNode("Системы");
             topNode.getTopNode().add(systemNode);
-            String topNodeName=topNode.getName();
-            Vector<String> result=DBC.queryToArticle(topNodeName);
-            for(String str:result) {
+            String topNodeName = topNode.getName();
+            Vector<String> result = DBC.queryToArticle(topNodeName);
+            for (String str : result) {
                 DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(str);
                 systemNode.add(newNode);
-                SubsystemNode subsystemNode = new SubsystemNode(topNodeName,str,newNode);
+                SubsystemNode subsystemNode = new SubsystemNode(topNodeName, str, newNode);
                 subsystemNodes.add(subsystemNode);
             }
+
+            DefaultMutableTreeNode resourceNode = new DefaultMutableTreeNode("Ресурсы");
+            topNode.getTopNode().add(resourceNode);
+            Vector<String> resourceNames=DBC.getResourcesNames(topNodeName);
+            Vector<String> resourceValues=DBC.getArticleResources(topNodeName);
+            Vector<String> resourceMeasurements=DBC.getArticleMeasurements(topNodeName);
+            for(int i=0;i<resourceNames.size();i++){
+                String resultString=resourceNames.get(i)+": "+resourceValues.get(i)+" "+resourceMeasurements.get(i);
+                DefaultMutableTreeNode newNode=new DefaultMutableTreeNode(resultString);
+                resourceNode.add(newNode);
+            }
+
         }
+
         createAlgorithmLeaves(topNodes);
         return subsystemNodes;
     }
@@ -248,12 +277,12 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             String deviceName=deviceNode.getDeviceName();
             Vector<String> sensorModes=DBC.queryToSensor(articleName,subsystemName,deviceName);
             Vector<String> deviceModes=DBC.queryToDevice(articleName,subsystemName,deviceName);
-            if(sensorModes.size()>0&&!sensorModes.get(0).equals("-12")){
+            if(sensorModes.size()>0&&!sensorModes.get(0).equals(Integer.toString(DBC.SQL_EXCEPTION))){
                 for(String str:sensorModes){
                     deviceNode.getDeviceNode().add(new DefaultMutableTreeNode(str));
                 }
             }
-            if(deviceModes.size()>0&&!deviceModes.get(0).equals("-12")){
+            if(deviceModes.size()>0&&!deviceModes.get(0).equals(Integer.toString(DBC.SQL_EXCEPTION))){
                 for(String str:deviceModes){
                     deviceNode.getDeviceNode().add(new DefaultMutableTreeNode(str));
                 }
@@ -294,9 +323,13 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
     public void mouseClicked(MouseEvent e) {
 
     }
-
     @Override
     public void mousePressed(MouseEvent e) {
+        if(e.isPopupTrigger()){
+            popupX=e.getX();
+            popupY=e.getY();
+            popupMenu.show(e.getComponent(),popupX,popupY);
+        }
         clicks=0;
         dc=false;
         if(e.getButton()==MouseEvent.BUTTON1){
@@ -339,6 +372,8 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                                 SystemInfo systemInfo=new SystemInfo(str.trim());
                                 systemInfoVector.add(systemInfo);
                                 handleWithTime(systemInfo);
+                                recountResources(systemInfo.getArticle(),systemInfo.getMode(),systemInfo);
+                                usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
                             }
                         }
                     }
@@ -354,18 +389,21 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
 
     @Override
     public void mouseReleased(MouseEvent e) {
-
+        if(e.isPopupTrigger()){
+            popupX=e.getX();
+            popupY=e.getY();
+            popupMenu.show(e.getComponent(),popupX,popupY);
+        }
     }
-
     @Override
     public void mouseEntered(MouseEvent e) {
 
     }
-
     @Override
     public void mouseExited(MouseEvent e) {
 
     }
+
     private void askForDelay(String[] splittedPath){
         JPanel delayPanel=new JPanel();
         JTextField delayField=new JTextField(10);
@@ -609,9 +647,10 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         String[] splittedStringPath=stringPath.split(",");
         if(splittedStringPath.length>=2){
             String articleName=splittedStringPath[1].replace("]","").trim();
+            Vector<String> resourcesNames=DBC.getResourcesNames(articleName);
             Vector<String> resources=DBC.getArticleResources(articleName);
             String usedResources=DBC.getUsedArticleResources(articleName);
-            Vector<String> resourcesNames=DBC.getArticleResourceNames(articleName);
+            Vector<String> resourcesMeas=DBC.getArticleResourceNames(articleName);
             if(usedResources==null) {
                 Vector<String> usedResourcesVector = DBC.getUsedArticleResourcesIfEmpty(articleName);
                 if (usedResourcesVector.isEmpty()) {
@@ -621,7 +660,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 }
                 String resultString = "";
                 for (int i = 0; i < resources.size(); i++) {
-                    resultString += usedResourcesVector.get(i) + "/" + resources.get(i) +resourcesNames.get(i)+ "\t";
+                    resultString += resourcesNames.get(i)+":"+usedResourcesVector.get(i) + "/" + resources.get(i) +resourcesMeas.get(i)+ "\t";
                 }
                 resourceMonitor.setText(resultString);
             }
@@ -637,45 +676,85 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             SystemInfo usedDevice = MainWindow.getSystemInfoVector().get(index);
             String[] usingMode = usedDevice.getMode().split("\t");
             String[] currentMode = systemInfo.getMode().split("\t");
+            if(!currentMode[0].trim().toUpperCase().equals("ВЫКЛ")&&usingMode[0].trim().toUpperCase().equals("ВЫКЛ")){
+                MainWindow.getSystemInfoVector().remove(usedDevice);
+                boolean foundDublicate=true;
+                while(foundDublicate){
+                    usedDevice = MainWindow.getSystemInfoVector().get(index);
+                    usingMode = usedDevice.getMode().split("\t");
+                    if(usingMode[0].trim().toUpperCase().equals("ВЫКЛ")){
+                        MainWindow.getSystemInfoVector().remove(usedDevice);
+                    }
+                    else
+                        foundDublicate=false;
+                }
+            }
             ArrayList<Double> prevResourceUsageList=new ArrayList<>();
+            Vector<String> resourcesNames=DBC.getResourcesNames(articleName);
             int size=resourceMonitor.getText().split("\t").length;
-            if (currentMode[0].trim().toUpperCase().equals("ВЫКЛ")) {
+            if (currentMode[0].trim().toUpperCase().equals("ВЫКЛ")&&!(usingMode[0].trim().toUpperCase().equals("ВЫКЛ"))) {
+                //usingDevices.remove(usingDevices.indexOf(systemInfo.getInfoWithoutDelayAndMode()));
+                MainWindow.getSystemInfoVector().remove(usedDevice);
                 String resources = resourceMonitor.getText();
                 String[] tempRes = resources.split("\t");
                 ArrayList<Double> currentResourceUsageList=new ArrayList<>();
                 for(int i=0;i<size;i++){
                     Double prevResourceUsage=Double.parseDouble(usingMode[i+1]);
-                    Double currentResourceUsage= Double.parseDouble(tempRes[i].split("/")[0]);
+                    Double currentResourceUsage= Double.parseDouble(tempRes[i].split("/")[0].split(":")[1]);
                     if(currentResourceUsage>0){
                         currentResourceUsage=currentResourceUsage-prevResourceUsage;
                         currentResourceUsageList.add(currentResourceUsage);
                     }
                 }
-                Vector<String> resourcesNames=DBC.getArticleResourceNames(articleName);
+                Vector<String> resourcesMeas=DBC.getArticleResourceNames(articleName);
                 String newResourcesString="";
                 Vector<String> articleResources=DBC.getArticleResources(articleName);
                 for(int i=0;i<size;i++){
-                    newResourcesString+=Double.toString(currentResourceUsageList.get(i)) + "/" + articleResources.get(i) +resourcesNames.get(i)+ "\t";
+                    newResourcesString+=resourcesNames.get(i)+":"+Double.toString(currentResourceUsageList.get(i)) + "/" + articleResources.get(i) +resourcesMeas.get(i)+ "\t";
 
                 }
                 resourceMonitor.setText(newResourcesString);
             }
+            else{
+                String[] tempResources = resourceMonitor.getText().split("\t");
+                size=resourceMonitor.getText().split("\t").length;
+                ArrayList<Double> currentResourceUsageList=new ArrayList<>();
+                for(int i=0;i<size;i++){
+                    Double prevResourceUsage=Double.parseDouble(tempResources[i].split("/")[0].split(":")[1]);
+                    Double currentResourceUsage= Double.parseDouble(currentMode[i+1]) + prevResourceUsage;
+                    currentResourceUsageList.add(currentResourceUsage);
+                }
+                resourcesNames=DBC.getArticleResourceNames(articleName);
+                Vector<String> articleResources=DBC.getArticleResources(articleName);
+                Vector<String> resourceNames=DBC.getResourcesNames(articleName);
+                String newResourcesString="";
+                for(int i=0;i<size;i++){
+                    newResourcesString+=resourceNames.get(i)+":"+Double.toString(currentResourceUsageList.get(i)) + "/" + articleResources.get(i) + resourcesNames.get(i)+"\t";
+                }
+                resourceMonitor.setText(newResourcesString);
+            }
+
         }
+
         if (!usingDevices.contains(systemInfo.getInfoWithoutDelayAndMode())) {//else replacement
             Vector<String> articleResources=DBC.getArticleResources(articleName);
+            Vector<String> resourceNames=DBC.getResourcesNames(articleName);
             String[] currentMode = systemInfo.getMode().split("\t");
+            if (currentMode[0].trim().toUpperCase().equals("ВЫКЛ")){
+                return;
+            }
             String[] tempResources = resourceMonitor.getText().split("\t");
             int size=resourceMonitor.getText().split("\t").length;
             ArrayList<Double> currentResourceUsageList=new ArrayList<>();
             for(int i=0;i<size;i++){
-                Double prevResourceUsage=Double.parseDouble(tempResources[i].split("/")[0]);
+                Double prevResourceUsage=Double.parseDouble(tempResources[i].split("/")[0].split(":")[1]);
                 Double currentResourceUsage= Double.parseDouble(currentMode[i+1]) + prevResourceUsage;
                 currentResourceUsageList.add(currentResourceUsage);
             }
             Vector<String> resourcesNames=DBC.getArticleResourceNames(articleName);
             String newResourcesString="";
             for(int i=0;i<size;i++){
-                newResourcesString+=Double.toString(currentResourceUsageList.get(i)) + "/" + articleResources.get(i) + resourcesNames.get(i)+"\t";
+                newResourcesString+=resourceNames.get(i)+":"+Double.toString(currentResourceUsageList.get(i)) + "/" + articleResources.get(i) + resourcesNames.get(i)+"\t";
             }
             resourceMonitor.setText(newResourcesString);
 
@@ -691,7 +770,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             ArrayList<String> resourceContain=new ArrayList<>();
             String line;
             while((line=reader.readLine())!=null){
-                if(!line.substring(line.indexOf("<"),line.indexOf(">")+1).equals("<"+articleName+">")){
+                if((line.length()>1)&&!line.substring(line.indexOf("<"),line.indexOf(">")+1).equals("<"+articleName+">")){
                     resourceContain.add(line);
                 }
             }
@@ -708,7 +787,19 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         }
     }
 
-    public static JFrame getMainFrame() {
+    static JFrame getMainFrame() {
         return mainFrame;
+    }
+    static JTree getTree() {
+        return tree;
+    }
+    static String getADD_RESOURCE() {
+        return ADD_RESOURCE;
+    }
+    static int getPopupX(){
+        return popupX;
+    }
+    static int getPopupY(){
+        return popupY;
     }
 }

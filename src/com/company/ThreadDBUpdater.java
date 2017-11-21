@@ -3,6 +3,8 @@ package com.company;
 
 import javax.swing.*;
 import javax.swing.text.DefaultEditorKit;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
@@ -20,6 +22,7 @@ implements ActionListener,WindowListener{
     private final static String SENSOR="Датчик";
     private JFrame DBUpdaterFrame;
     private JPanel mainPanel,startPanel;
+    //private JScrollPane resourcesPanelScrollPane=new JScrollPane();
     //Для контроля за вводимыми значениями и получением данных из полей
     private Vector<TextFieldAndDouble> resourceTextFieldAndMaxVal=new Vector<>();
     private int state;
@@ -123,6 +126,8 @@ implements ActionListener,WindowListener{
             @Override
             public void keyReleased(KeyEvent e) {
                 resourcesPanel.removeAll();
+                //resourcesPanelScrollPane.removeAll();
+                //resourcesPanel.setLayout(new GridLayout(0,6));
                 resourceTextFields.clear();
                 int resourcesCount=Integer.parseInt(resourcesFieldsCount.getText());
                 //В зависимостти от числа, добавть поля
@@ -150,6 +155,7 @@ implements ActionListener,WindowListener{
                     resourceTextFields.add(resourceMeasurment);
                     updateWindow();
                 }
+                //resourcesPanelScrollPane=new JScrollPane(resourcesPanel);
             }
         });
         confirmButton.addActionListener(new ActionListener() {
@@ -172,6 +178,10 @@ implements ActionListener,WindowListener{
 
                     }
                     int result=DBConnection.addArticle(chosenName,lastIndex,columns,columnsValues,valuesMeasurements);
+                    JTree tree=MainWindow.getTree();
+                    DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
+                    DefaultMutableTreeNode rootNode=(DefaultMutableTreeNode) treeModel.getRoot();
+                    treeModel.insertNodeInto(new DefaultMutableTreeNode(chosenName),rootNode,rootNode.getChildCount());
                     verifyResult(result);
                     resetUI();
                 }
@@ -183,6 +193,7 @@ implements ActionListener,WindowListener{
         enterPanel.add(resourcesFieldsCountLabel);
         enterPanel.add(resourcesFieldsCount);
         mainPanel.add(enterPanel);
+        //mainPanel.add(resourcesPanelScrollPane);
         mainPanel.add(resourcesPanel);
     }
     private void addSubsystem(){
@@ -208,26 +219,43 @@ implements ActionListener,WindowListener{
                 submitButton.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        String chosenName=newSubsystemName.getText();
-                        boolean matching=testForMatching(result,chosenName);
-                        if(!chosenName.isEmpty()&&!matching){
+                        String chosenName = newSubsystemName.getText();
+                        boolean matching = testForMatching(result, chosenName);
+                        if (!chosenName.isEmpty() && !matching) {
                             //Если все ок, то запрос
-                            int result=DBConnection.addSubsystem(selectedArticle,chosenName,lastIndex);
+                            int result = DBConnection.addSubsystem(selectedArticle, chosenName, lastIndex);
+
+                            JTree tree = MainWindow.getTree();
+                            DefaultTreeModel treeModel = (DefaultTreeModel) tree.getModel();
+                            DefaultMutableTreeNode rootNode = (DefaultMutableTreeNode) treeModel.getRoot();
+                            int i = 0;
+                            Object articleNode;
+                            while (!((articleNode = treeModel.getChild(rootNode, i)).toString().equals(selectedArticle))) {
+                                if (i == rootNode.getChildCount()-1) {
+                                    JOptionPane.showMessageDialog(DBUpdaterFrame, "error in first cycle", "Error", JOptionPane.ERROR_MESSAGE);
+                                    break;
+                                }
+                                i++;
+                            }
+                            Object subsystemNode = treeModel.getChild(articleNode, 0);
+                            treeModel.insertNodeInto(new DefaultMutableTreeNode(chosenName), (DefaultMutableTreeNode) subsystemNode, ((DefaultMutableTreeNode) subsystemNode).getChildCount());
+
                             verifyResult(result);
                             resetUI();
                         }
-                        if(chosenName.isEmpty()){
-                            JOptionPane.showMessageDialog(DBUpdaterFrame,"Введите имя","Введите имя",JOptionPane.ERROR_MESSAGE);
+
+                        if (chosenName.isEmpty()) {
+                            JOptionPane.showMessageDialog(DBUpdaterFrame, "Введите имя", "Введите имя", JOptionPane.ERROR_MESSAGE);
                         }
-                        if(matching){
-                            JOptionPane.showMessageDialog(DBUpdaterFrame,"Имя","Это имя уже занято",JOptionPane.ERROR_MESSAGE);
+                        if (matching) {
+                            JOptionPane.showMessageDialog(DBUpdaterFrame, "Имя", "Это имя уже занято", JOptionPane.ERROR_MESSAGE);
                         }
                     }
                 });
                 enterPanel.add(newSubsystemName);
                 enterPanel.add(submitButton);
                 mainPanel.add(enterPanel);
-                DBUpdaterFrame.repaint();
+                updateWindow(DBUpdaterFrame.getHeight(),DBUpdaterFrame.getWidth());
             }
         });
         JPanel listPanel=new JPanel();
@@ -276,11 +304,63 @@ implements ActionListener,WindowListener{
                                 //Если все ок, то запрос
                                 if(deviceChooser.getSelectedItem().equals(DEVICE)) {
                                     int result = DBConnection.addDevice(selectedArticle, selectedSubsystem, chosenName, intList.get(0));
+
+                                    JTree tree=MainWindow.getTree();
+                                    DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
+                                    DefaultMutableTreeNode rootNode=(DefaultMutableTreeNode) treeModel.getRoot();
+                                    int i=0;
+                                    Object articleNode;
+                                    while(!((articleNode=treeModel.getChild(rootNode,i)).toString().equals(selectedArticle))){
+                                        if(i==rootNode.getChildCount()-1) {
+                                            JOptionPane.showMessageDialog(DBUpdaterFrame,"error in first cycle","Error",JOptionPane.ERROR_MESSAGE);
+                                            break;
+                                        }
+                                        i++;
+                                    }
+                                    DefaultMutableTreeNode systemNode=(DefaultMutableTreeNode) treeModel.getChild(articleNode,0);
+                                    Object subsystemNode;
+                                    i = 0;
+                                    while (!(subsystemNode = treeModel.getChild(systemNode, i)).toString().toLowerCase().equals(selectedSubsystem)) {
+                                        if (i == rootNode.getChildCount()-1) {
+                                            JOptionPane.showMessageDialog(DBUpdaterFrame, "error in second cycle", "Error", JOptionPane.ERROR_MESSAGE);
+                                            break;
+                                        }
+                                        i++;
+                                    }
+
+                                    treeModel.insertNodeInto(new DefaultMutableTreeNode(chosenName),(DefaultMutableTreeNode)subsystemNode,((DefaultMutableTreeNode) subsystemNode).getChildCount());
+
                                     verifyResult(result);
                                     resetUI();
                                 }
                                 if(deviceChooser.getSelectedItem().equals(SENSOR)){
                                     int result = DBConnection.addSensor(selectedArticle, selectedSubsystem, chosenName, intList.get(1));
+
+                                    JTree tree=MainWindow.getTree();
+                                    DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
+                                    DefaultMutableTreeNode rootNode=(DefaultMutableTreeNode) treeModel.getRoot();
+                                    int i=0;
+                                    Object articleNode;
+                                    while(!((articleNode=treeModel.getChild(rootNode,i)).toString().equals(selectedArticle))){
+                                        if(i==rootNode.getChildCount()) {
+                                            JOptionPane.showMessageDialog(DBUpdaterFrame,"error in first cycle","Error",JOptionPane.ERROR_MESSAGE);
+                                            break;
+                                        }
+                                        i++;
+                                    }
+                                    DefaultMutableTreeNode systemNode=(DefaultMutableTreeNode) treeModel.getChild(articleNode,0);
+                                    Object subsystemNode;
+                                    i = 0;
+                                    while (!(subsystemNode = treeModel.getChild(systemNode, i)).toString().toLowerCase().equals(selectedSubsystem)) {
+                                        if (i == systemNode.getChildCount()-1) {
+                                            JOptionPane.showMessageDialog(DBUpdaterFrame, "error in second cycle", "Error", JOptionPane.ERROR_MESSAGE);
+                                            break;
+                                        }
+                                        i++;
+                                    }
+
+                                    treeModel.insertNodeInto(new DefaultMutableTreeNode(chosenName),(DefaultMutableTreeNode)subsystemNode,((DefaultMutableTreeNode) subsystemNode).getChildCount());
+
                                     verifyResult(result);
                                     resetUI();
                                 }
@@ -297,6 +377,7 @@ implements ActionListener,WindowListener{
                     enterPanel.add(deviceChooser);
                     enterPanel.add(submitButton);
                     mainPanel.add(enterPanel);
+                    updateWindow(DBUpdaterFrame.getHeight(),DBUpdaterFrame.getWidth());
 
                 }
                 if(state==QUERY_TO_ARTICLES) {
@@ -329,6 +410,7 @@ implements ActionListener,WindowListener{
         nextButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                updateWindow(DBUpdaterFrame.getHeight(),DBUpdaterFrame.getWidth());
                 if(state==QUERY_TO_SUBSYSTEM){
                     ArrayList<Integer> intList=new ArrayList<>();
                     selectedDevice=resultList.getSelectedValue().toLowerCase();
@@ -354,12 +436,13 @@ implements ActionListener,WindowListener{
                     Vector<Vector<String>> resourceNamesAndValues=DBConnection.getResourcesCountAndNamesAndMaxValue(selectedArticle);
                     verifyResult(resourceNamesAndValues);
                     Vector<String> resourceNames=resourceNamesAndValues.get(0);
+
                     for(int i=0;i<resourceNames.size();++i){
                         JTextField resourceTextField=new JTextField(20);
                         JLabel resourceLabel=new JLabel(resourceNames.get(i));
                         resourceLabel.setLabelFor(resourceTextField);
-                        enterPanel.add(resourceTextField);
                         enterPanel.add(resourceLabel);
+                        enterPanel.add(resourceTextField);
                         Double maxVal=Double.parseDouble(resourceNamesAndValues.get(1).get(i));
                         TextFieldAndDouble temp=new TextFieldAndDouble(resourceTextField,maxVal);
                         resourceTextFieldAndMaxVal.add(temp);
@@ -369,18 +452,58 @@ implements ActionListener,WindowListener{
                         //Добавить matching, получать имена режимов из запроса
                         @Override
                         public void actionPerformed(ActionEvent e) {
-                            Vector<String> modeNames = DBConnection.getModeNames();
+                            Vector<String> modeNames = DBConnection.getModeNames(selectedArticle);
                             String chosenName = newModeName.getText();
                             boolean matching = testForMatching(modeNames, chosenName);
                             if (!chosenName.isEmpty()&&!matching) {
                                 Vector<Double> resources = new Vector<>();
                                 Vector<Double> maxValaues = new Vector<>();
+                                int i=0;
+                                boolean okFlag=true;
                                 for (TextFieldAndDouble tf : resourceTextFieldAndMaxVal) {
                                     resources.add(Double.parseDouble(tf.getTextField().getText()));
                                     maxValaues.add(tf.getDoubleValue());
+                                    if(resources.get(i)>maxValaues.get(i)){
+                                        okFlag=false;
+                                    }
                                 }
-                                if (resources.get(0) < maxValaues.get(0) && resources.get(1) < maxValaues.get(1) && resources.get(2) < maxValaues.get(2)) {
-                                    int result=DBConnection.addMode(selectedArticle, selectedSubsystem, selectedDevice, chosenName, resources.get(0), resources.get(1), resources.get(2),lastIndex);
+
+                                if (okFlag) {
+                                    int result=DBConnection.addMode(selectedArticle, selectedSubsystem, selectedDevice, chosenName, resources,lastIndex);
+
+                                    JTree tree=MainWindow.getTree();
+                                    DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
+                                    DefaultMutableTreeNode rootNode=(DefaultMutableTreeNode) treeModel.getRoot();
+                                    i=0;
+                                    Object articleNode;
+                                    while(!((articleNode=treeModel.getChild(rootNode,i)).toString().equals(selectedArticle))){
+                                        if(i==rootNode.getChildCount()-1) {
+                                            JOptionPane.showMessageDialog(DBUpdaterFrame,"error in first cycle","Error",JOptionPane.ERROR_MESSAGE);
+                                            break;
+                                        }
+                                        i++;
+                                    }
+                                    DefaultMutableTreeNode systemNode=(DefaultMutableTreeNode) treeModel.getChild(articleNode,0);
+                                    Object subsystemNode;
+                                    i = 0;
+                                    while (!(subsystemNode = treeModel.getChild(systemNode, i)).toString().toLowerCase().equals(selectedSubsystem)) {
+                                        if (i == systemNode.getChildCount()-1&&systemNode.getChildCount()>1) {
+                                            JOptionPane.showMessageDialog(DBUpdaterFrame, "error in second cycle", "Error", JOptionPane.ERROR_MESSAGE);
+                                            break;
+                                        }
+                                        i++;
+                                    }
+                                    Object deviceNode;
+                                    i=0;
+                                    while(!((deviceNode=treeModel.getChild(subsystemNode,i)).toString().equals(selectedDevice))){
+                                        if (i == ((DefaultMutableTreeNode)subsystemNode).getChildCount()-1) {
+                                            JOptionPane.showMessageDialog(DBUpdaterFrame, "error in third cycle", "Error", JOptionPane.ERROR_MESSAGE);
+                                            break;
+                                        }
+                                        i++;
+                                    }
+                                    treeModel.insertNodeInto(new DefaultMutableTreeNode(chosenName),(DefaultMutableTreeNode)deviceNode,((DefaultMutableTreeNode) deviceNode).getChildCount());
+
                                     verifyResult(result);
                                     resetUI();
                                 }
@@ -468,6 +591,17 @@ implements ActionListener,WindowListener{
         }
         DBUpdaterFrame.setSize(dimension);
     }
+    private void updateWindow(int height,int width){
+        Dimension dimension;
+        if(DBUpdaterFrame.getSize().height<height){
+            dimension=new Dimension(width,DBUpdaterFrame.getSize().height+1);
+        }
+        else {
+            dimension = new Dimension(width, DBUpdaterFrame.getSize().height - 1);
+        }
+        DBUpdaterFrame.setSize(dimension);
+    }
+
 
     @Override
     public void windowOpened(WindowEvent e) {
