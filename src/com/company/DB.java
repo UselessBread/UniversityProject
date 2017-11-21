@@ -2,10 +2,16 @@ package com.company;
 
 /**
  * Created by Игорь on 08.08.2017.
- * queryToSensor && queryToDevice should be united
  */
+
+import javax.swing.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Vector;
 
 
@@ -14,6 +20,7 @@ public class DB {
     static final int SQL_EXCEPTION = -12;
     static final int CLASS_CAST_EXCEPTION = -13;
     static final int OK = 12;
+    private static final String TO_DELETE="-20";
     private final String url = "jdbc:mysql://127.0.0.1:3306/ка";
     private final String user = "root";
     private final String password = "5986";
@@ -38,7 +45,8 @@ public class DB {
         }
         return OK;
     }
-    public int connect(){
+
+    public int connect() {
         try {
             Class.forName("com.mysql.jdbc.Driver");
             connection = DriverManager.getConnection(url, user, password);
@@ -50,7 +58,8 @@ public class DB {
         }
         return OK;
     }
-    public void disconnect(){
+
+    public void disconnect() {
         try {
             connection.close();
         } catch (SQLException e) {
@@ -203,7 +212,6 @@ public class DB {
         }
         return stringVector;
     }
-
     Vector<String> queryToArticles() {
         String query = "SELECT * FROM изделия;";
         Vector<String> sVec = new Vector<>();
@@ -258,7 +266,6 @@ public class DB {
         }
         return sVec;
     }
-
     Vector<String> queryToArticle(String prevQueryResult) {
         String query = "SELECT подсистемы\n" +
                 "FROM ка.изделия\n" +
@@ -322,10 +329,18 @@ public class DB {
         return stringVector;
 
     }
-
     //selectedItem- имя выбранного прибора
     Vector<String> queryToDevice(String article, String subsystem, String selectedItem) {
-        String query = "SELECT idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+        String resourceConsumption="";
+        Vector<String> resourceConsumptionVector=getArticleResourceNames(article);
+        for(int i=0;i<resourceConsumptionVector.size();i++){
+            if(i==resourceConsumptionVector.size()-1){
+                resourceConsumption+="потребление_ресурса"+(i+1);
+            }
+            else
+                resourceConsumption+="потребление_ресурса"+(i+1)+", ";
+        }
+        String query = "SELECT idрежима,"+resourceConsumption+"\n" +
                 "FROM ка.изделия\n" +
                 "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
                 "inner join " + subsystem + "_" + article + " on " + article + ".подсистемы=" + subsystem + "_" + article + ".idподсистема\n" +
@@ -338,8 +353,15 @@ public class DB {
             try {
                 ResultSet resultSet = (ResultSet) resultObject;
                 while (resultSet.next()) {
-                    stringVector.add(resultSet.getString("idрежима") + "\t" + resultSet.getString("потребление_ресурса1") + "\t" +
-                            resultSet.getString("потребление_ресурса2") + "\t" + resultSet.getString("потребление_ресурса3"));
+                    String results="";
+                    for(int i=0;i<resourceConsumptionVector.size();i++){
+                        if(i==resourceConsumptionVector.size()-1){
+                            results+=resultSet.getString("потребление_ресурса"+(i+1)+"");
+                        }
+                        else
+                            results+=resultSet.getString("потребление_ресурса"+(i+1)+"") + "\t";
+                    }
+                    stringVector.add(resultSet.getString("idрежима") + "\t"+results);
                 }
             } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
@@ -358,7 +380,20 @@ public class DB {
         return stringVector;
     }
     Vector<String> queryToDevice(String article, String subsystem, String selectedItem, ArrayList<Integer> lastIndex) {
-        String query = "SELECT `" + selectedItem + "_" + article + "_" + subsystem + "`.`id`,idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+        //Определять количество ресурсов
+        String resources="";
+        Vector<String>resourceConsumption=getArticleResources(article);
+        for(int i=0;i<resourceConsumption.size();i++){
+            if(i==resourceConsumption.size()-1) {
+                //resources += resourceConsumption.get(i) + (i + 1);
+                resources+="`потребление_ресурса"+(i+1)+"`";
+            }
+            else
+                //resources += resourceConsumption.get(i) + (i + 1) + ",";
+                resources+="`потребление_ресурса"+(i+1)+"`,";
+        }
+
+        String query = "SELECT `"+selectedItem + "_" + article + "_" + subsystem + "`.`id`, `режимы_" + selectedItem + "_" + article + "_" + subsystem + "`.`idрежима`,"+resources+"\n" +
                 "FROM ка.изделия\n" +
                 "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
                 "inner join " + subsystem + "_" + article + " on " + article + ".подсистемы=" + subsystem + "_" + article + ".idподсистема\n" +
@@ -371,8 +406,15 @@ public class DB {
             try {
                 ResultSet resultSet = (ResultSet) resultObject;
                 while (resultSet.next()) {
-                    stringVector.add(resultSet.getString("idрежима") + "\t" + resultSet.getString("потребление_ресурса1") + "\t" +
-                            resultSet.getString("потребление_ресурса2") + "\t" + resultSet.getString("потребление_ресурса3"));
+                    String consumption="";
+                    for(int i=0;i<resourceConsumption.size();i++){
+                        if(i<resourceConsumption.size()-1){
+                            consumption+=resultSet.getString("потребление_ресурса"+(i+1)+"") + "\t";
+                        }
+                        else
+                            consumption+=resultSet.getString("потребление_ресурса"+(i+1)+"");
+                    }
+                    stringVector.add(resultSet.getString("idрежима") + "\t" + consumption);
                     lastIndex.clear();
                     lastIndex.add(resultSet.getInt("id"));
                 }
@@ -398,7 +440,16 @@ public class DB {
 
     //selectedItem- имя выбранного датчика
     Vector<String> queryToSensor(String article, String subsystem, String selectedItem) {
-        String query = "SELECT idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+        String resourceConsumption="";
+        Vector<String> resourceConsumptionVector=getArticleResourceNames(article);
+        for(int i=0;i<resourceConsumptionVector.size();i++){
+            if(i==resourceConsumptionVector.size()-1){
+                resourceConsumption+="потребление_ресурса"+(i+1);
+            }
+            else
+                resourceConsumption+="потребление_ресурса"+(i+1)+", ";
+        }
+        String query = "SELECT idрежима,"+resourceConsumption+"\n" +
                 "FROM ка.изделия\n" +
                 "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
                 "inner join " + subsystem + "_" + article + " on " + article + ".подсистемы=" + subsystem + "_" + article + ".idподсистема\n" +
@@ -411,8 +462,15 @@ public class DB {
             try {
                 ResultSet resultSet = (ResultSet) resultObject;
                 while (resultSet.next()) {
-                    stringVector.add(resultSet.getString("idрежима") + "\t" + resultSet.getString("потребление_ресурса1") + "\t" +
-                            resultSet.getString("потребление_ресурса2") + "\t" + resultSet.getString("потребление_ресурса3"));
+                    String results="";
+                    for(int i=0;i<resourceConsumptionVector.size();i++){
+                        if(i==resourceConsumptionVector.size()-1){
+                            results+=resultSet.getString("потребление_ресурса"+(i+1)+"");
+                        }
+                        else
+                            results+=resultSet.getString("потребление_ресурса"+(i+1)+"") + "\t";
+                    }
+                    stringVector.add(resultSet.getString("idрежима") + "\t"+results);
                 }
             } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
@@ -431,7 +489,19 @@ public class DB {
         return stringVector;
     }
     Vector<String> queryToSensor(String article, String subsystem, String selectedItem, ArrayList<Integer> lastIndex) {
-        String query = "SELECT `" + selectedItem + "_" + article + "_" + subsystem + "`.`id`,idрежима,потребление_ресурса1,потребление_ресурса2,потребление_ресурса3\n" +
+        String resources="";
+        Vector<String>resourceConsumption=getArticleResources(article);
+        for(int i=0;i<resourceConsumption.size();i++){
+            if(i==resourceConsumption.size()-1) {
+                //resources += resourceConsumption.get(i) + (i + 1);
+                resources+="`потребление_ресурса"+(i+1)+"`";
+            }
+            else
+                //resources += resourceConsumption.get(i) + (i + 1) + ",";
+                resources+="`потребление_ресурса"+(i+1)+"`,";
+        }
+
+        String query = "SELECT `"+selectedItem + "_" + article + "_" + subsystem + "`.`id`, `режимы_"+ selectedItem + "_" + article + "_" + subsystem + "`.`idрежима`,"+resources+"\n" +
                 "FROM ка.изделия\n" +
                 "inner join " + article + " on изделия.имя_изделия=" + article + ".имя\n" +
                 "inner join " + subsystem + "_" + article + " on " + article + ".подсистемы=" + subsystem + "_" + article + ".idподсистема\n" +
@@ -444,8 +514,15 @@ public class DB {
             try {
                 ResultSet resultSet = (ResultSet) resultObject;
                 while (resultSet.next()) {
-                    stringVector.add(resultSet.getString("idрежима") + "\t" + resultSet.getString("потребление_ресурса1") + "\t" +
-                            resultSet.getString("потребление_ресурса2") + "\t" + resultSet.getString("потребление_ресурса3"));
+                    String consumption="";
+                    for(int i=0;i<resourceConsumption.size();i++){
+                        if(i<resourceConsumption.size()-1){
+                            consumption+=resultSet.getString("потребление_ресурса"+(i+1)+"") + "\t";
+                        }
+                        else
+                            consumption+=resultSet.getString("потребление_ресурса"+(i+1)+"");
+                    }
+                    stringVector.add(resultSet.getString("idрежима") + "\t" + consumption);
                     lastIndex.clear();
                     lastIndex.add(resultSet.getInt("id"));
                 }
@@ -468,7 +545,6 @@ public class DB {
         }
         return stringVector;
     }
-
     Vector<String> getDeviceNames(String articleName, String subsystemName) {
         String query = "SELECT idприбор_for\n" +
                 "FROM " + subsystemName + "_" + articleName + "\n" +
@@ -488,10 +564,10 @@ public class DB {
         }
         return stringVector;
     }
-    Vector<String> getSensorNames(String articleName,String subsystemName){
-        String query="SELECT  название\n" +
-                "FROM "+subsystemName+"_"+articleName+"\n" +
-                "INNER JOIN датчики_"+articleName+"_"+subsystemName+" ON "+subsystemName+"_"+articleName+".idдатчика=датчики_"+articleName+"_"+subsystemName+".idдатчики";
+    Vector<String> getSensorNames(String articleName, String subsystemName) {
+        String query = "SELECT  название\n" +
+                "FROM " + subsystemName + "_" + articleName + "\n" +
+                "INNER JOIN датчики_" + articleName + "_" + subsystemName + " ON " + subsystemName + "_" + articleName + ".idдатчика=датчики_" + articleName + "_" + subsystemName + ".idдатчики";
         Vector<String> stringVector = new Vector<>();
         Object resultObject = execQuery(query);
         if (verifyResult(resultObject) == OK) {
@@ -510,22 +586,23 @@ public class DB {
 
     private int execUpdate(String query) {
         try {
-            savepoint=connection.setSavepoint();
+            savepoint = connection.setSavepoint();
             connection.setAutoCommit(false);
-            int result= statement.executeUpdate(query);
+            int result = statement.executeUpdate(query);
             connection.commit();
             return result;
         } catch (SQLException exc) {
             try {
                 connection.rollback(savepoint);
-            }catch (SQLException rollbackExc){
+            } catch (SQLException rollbackExc) {
                 return SQL_EXCEPTION;
             }
             return SQL_EXCEPTION;
         }
     }
-    int saveToDB(String article,String name,Vector<SystemInfo> systemInfoVector){
-        String query="CREATE TABLE `ка`.`"+name+"_"+article+"` (\n" +
+
+    int saveToDB(String article, String name, Vector<SystemInfo> systemInfoVector) {
+        String query = "CREATE TABLE `ка`.`" + name + "_" + article + "` (\n" +
                 "  `id` INT NOT NULL AUTO_INCREMENT,\n" +
                 "  `изделие` VARCHAR(45) NULL,\n" +
                 "  `подсистема` VARCHAR(45) NULL,\n" +
@@ -537,166 +614,173 @@ public class DB {
                 "  UNIQUE INDEX `idname_UNIQUE` (`id` ASC))\n" +
                 "ENGINE = InnoDB\n" +
                 "DEFAULT CHARACTER SET = utf8;\n";
-        String addQuery="INSERT INTO "+article+"_алгоритмы(`имя_алгоритма`) VALUES('"+name+"');";
-        int result1=execUpdate(addQuery);
-        int result=execUpdate(query);
+        String addQuery = "INSERT INTO " + article + "_алгоритмы(`имя_алгоритма`) VALUES('" + name + "');";
+        int result1 = execUpdate(addQuery);
+        int result = execUpdate(query);
 
-        int verRes=verifyResult(result);
-        int verRes1=verifyResult(result1);
-        if(verRes==CLASS_NOT_FOUND||verRes1==CLASS_NOT_FOUND) {
+        int verRes = verifyResult(result);
+        int verRes1 = verifyResult(result1);
+        if (verRes == CLASS_NOT_FOUND || verRes1 == CLASS_NOT_FOUND) {
             return CLASS_NOT_FOUND;
         }
-        if(verRes==SQL_EXCEPTION||verRes1==SQL_EXCEPTION) {
+        if (verRes == SQL_EXCEPTION || verRes1 == SQL_EXCEPTION) {
             return SQL_EXCEPTION;
         }
-        if(verRes==CLASS_CAST_EXCEPTION||verRes1==CLASS_CAST_EXCEPTION) {
+        if (verRes == CLASS_CAST_EXCEPTION || verRes1 == CLASS_CAST_EXCEPTION) {
             return CLASS_CAST_EXCEPTION;
         }
-        for(SystemInfo systemInfo:systemInfoVector){
+        for (SystemInfo systemInfo : systemInfoVector) {
 
-            String insertQuery="INSERT INTO `ка`.`"+name+"_"+article+"` (`изделие`,`подсистема`,`устройство`,`режим`,`задержка`,`отношение`)\n"+
-                    "VALUES('"+systemInfo.getArticle()+"','"+systemInfo.getSubsystem()+"','"+systemInfo.getDeviceName()+"','"+systemInfo.getMode()+"','"+systemInfo.getDelay()+"','"+systemInfo.getRelation()+"');";
-            result=execUpdate(insertQuery);
-            verRes=verifyResult(result);
-            if(verRes==CLASS_NOT_FOUND) {
+            String insertQuery = "INSERT INTO `ка`.`" + name + "_" + article + "` (`изделие`,`подсистема`,`устройство`,`режим`,`задержка`,`отношение`)\n" +
+                    "VALUES('" + systemInfo.getArticle() + "','" + systemInfo.getSubsystem() + "','" + systemInfo.getDeviceName() + "','" + systemInfo.getMode() + "','" + systemInfo.getDelay() + "','" + systemInfo.getRelation() + "');";
+            result = execUpdate(insertQuery);
+            verRes = verifyResult(result);
+            if (verRes == CLASS_NOT_FOUND) {
                 return CLASS_NOT_FOUND;
             }
-            if(verRes==SQL_EXCEPTION) {
+            if (verRes == SQL_EXCEPTION) {
                 return SQL_EXCEPTION;
             }
-            if(verRes==CLASS_CAST_EXCEPTION) {
+            if (verRes == CLASS_CAST_EXCEPTION) {
                 return CLASS_CAST_EXCEPTION;
             }
 
         }
         return OK;
     }
-    Object openQuery(String name){
-        String query="SELECT * FROM `ка`.`"+name+"`;";
-        Object resultObject=execQuery(query);
-        if (verifyResult(resultObject)==OK) {
+
+    Object openQuery(String name) {
+        String query = "SELECT * FROM `ка`.`" + name + "`;";
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
             ResultSet resultSet = (ResultSet) resultObject;
-            try{
-                while (resultSet.next()){
-                    String article=resultSet.getString("изделие")+" ";
-                    String subsystem=resultSet.getString("подсистема")+" ";
-                    String deviceName=resultSet.getString("устройство")+" ";
-                    String mode=resultSet.getString("режим");
-                    String delay=resultSet.getString("задержка");
-                    String relation=resultSet.getString("отношение");
-                    if (relation.length()==0)
-                        relation="";
-                    SystemInfo systemInfo=new SystemInfo(article,subsystem,deviceName,mode,delay,relation);
+            try {
+                while (resultSet.next()) {
+                    String article = resultSet.getString("изделие") + " ";
+                    String subsystem = resultSet.getString("подсистема") + " ";
+                    String deviceName = resultSet.getString("устройство") + " ";
+                    String mode = resultSet.getString("режим");
+                    String delay = resultSet.getString("задержка");
+                    String relation = resultSet.getString("отношение");
+                    if (relation.length() == 0)
+                        relation = "";
+                    SystemInfo systemInfo = new SystemInfo(article, subsystem, deviceName, mode, delay, relation);
                     MainWindow.getSystemInfoVector().add(systemInfo);
                 }
-            }catch(SQLException e){}
-        }
-        else if(verifyResult(resultObject)==CLASS_NOT_FOUND){
+            } catch (SQLException e) {
+            }
+        } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             return CLASS_NOT_FOUND;
-        }
-        else if(verifyResult(resultObject)==SQL_EXCEPTION){
+        } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
             return SQL_EXCEPTION;
-        }
-        else if(verifyResult(resultObject)==CLASS_CAST_EXCEPTION){
+        } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
             return CLASS_CAST_EXCEPTION;
         }
         return MainWindow.getSystemInfoVector();
     }
-    ArrayList<Double> getAllResources(){
-        ArrayList<Double> resultList=new ArrayList<>();
-        String query="SELECT * FROM `ка`.`ресурсы`";
-        Object resultObject=execQuery(query);
-        int test=verifyResult(resultObject);
-        if(test==CLASS_NOT_FOUND) {
-             resultList.add((double)CLASS_NOT_FOUND);
-             return resultList;
-        }
-        if(test==SQL_EXCEPTION) {
-             resultList.add((double)SQL_EXCEPTION);
+    ArrayList<Double> getAllResources() {
+        ArrayList<Double> resultList = new ArrayList<>();
+        String query = "SELECT * FROM `ка`.`ресурсы`";
+        Object resultObject = execQuery(query);
+        int test = verifyResult(resultObject);
+        if (test == CLASS_NOT_FOUND) {
+            resultList.add((double) CLASS_NOT_FOUND);
             return resultList;
         }
-        if(test==CLASS_CAST_EXCEPTION) {
-             resultList.add((double)CLASS_CAST_EXCEPTION);
+        if (test == SQL_EXCEPTION) {
+            resultList.add((double) SQL_EXCEPTION);
             return resultList;
         }
-        ResultSet resultSet=(ResultSet)resultObject;
+        if (test == CLASS_CAST_EXCEPTION) {
+            resultList.add((double) CLASS_CAST_EXCEPTION);
+            return resultList;
+        }
+        ResultSet resultSet = (ResultSet) resultObject;
         try {
             while (resultSet.next()) {
                 resultList.add(Double.parseDouble(resultSet.getString("ресурс_1")));
                 resultList.add(Double.parseDouble(resultSet.getString("ресурс_2")));
                 resultList.add(Double.parseDouble(resultSet.getString("ресурс_3")));
             }
-        }catch (SQLException sqlE){
-            resultList.add((double)SQL_EXCEPTION);
+        } catch (SQLException sqlE) {
+            resultList.add((double) SQL_EXCEPTION);
             return resultList;
         }
         return resultList;
     }
-    Vector<Vector<String>> getResourcesCountAndNamesAndMaxValue() {
-        Vector<String> resourceVector=new Vector<>();
-        Vector<String> vectorOfNames=new Vector<>();
-        Vector<Vector<String>> resultVector=new Vector<>();
 
-        String query="SELECT * FROM `ка`.`ресурсы`";
-        Object resultObject=execQuery(query);
-        int test=verifyResult(resultObject);
-        if(test==CLASS_NOT_FOUND){
+    Vector<Vector<String>> getResourcesCountAndNamesAndMaxValue(String articleName) {
+        //Подстраиваться под ресуры
+        Vector<String> resourceVector = new Vector<>();
+        Vector<String> vectorOfNames = new Vector<>();
+        Vector<Vector<String>> resultVector = new Vector<>();
+        String resources="";
+        Vector<String> resourcesVector=getArticleResources(articleName);
+        for (int i=0;i<resourcesVector.size();i++){
+            vectorOfNames.add("ресурс_"+(i+1));
+        }
+        String query = "SELECT * FROM `ка`.`"+articleName+"_ресурсы`";
+        Object resultObject = execQuery(query);
+        int test = verifyResult(resultObject);
+        if (test == CLASS_NOT_FOUND) {
             vectorOfNames.add(Integer.toString(CLASS_NOT_FOUND));
             resultVector.add(vectorOfNames);
             resultVector.add(resourceVector);
             return resultVector;
         }
-        if(test==CLASS_CAST_EXCEPTION){
+        if (test == CLASS_CAST_EXCEPTION) {
             vectorOfNames.add(Integer.toString(CLASS_CAST_EXCEPTION));
             resultVector.add(vectorOfNames);
             resultVector.add(resourceVector);
             return resultVector;
         }
-        if(test==SQL_EXCEPTION){
+        if (test == SQL_EXCEPTION) {
             vectorOfNames.add(Integer.toString(SQL_EXCEPTION));
             resultVector.add(vectorOfNames);
             resultVector.add(resourceVector);
             return resultVector;
         }
-        ResultSet resultSet=(ResultSet)resultObject;
+
+        ResultSet resultSet = (ResultSet) resultObject;
         try {
-            while (resultSet.next()){
-                resourceVector.add(resultSet.getString("ресурс_1"));
-                resourceVector.add(resultSet.getString("ресурс_2"));
-                resourceVector.add(resultSet.getString("ресурс_3"));
+            while (resultSet.next()) {
+                for(String str:vectorOfNames){
+                    resourceVector.add(resultSet.getString(str));
+                }
             }
-        }catch (SQLException SQLexc){
+        } catch (SQLException SQLexc) {
             vectorOfNames.clear();
             vectorOfNames.add(Integer.toString(SQL_EXCEPTION));
             resultVector.add(vectorOfNames);
             resultVector.add(resourceVector);
             return resultVector;
         }
-        vectorOfNames.add("ресурс_1");
-        vectorOfNames.add("ресурс_2");
-        vectorOfNames.add("ресурс_3");
         resultVector.add(vectorOfNames);
         resultVector.add(resourceVector);
         return resultVector;
     }
-    Vector<String> getModeNames(){
-        Vector<String>modeNames=new Vector<>();
-        String query="SELECT * FROM `ка`.`ресурсы`";
-        Object resultObject=execQuery(query);
-        int test=verifyResult(resultObject);
-        if(test==CLASS_CAST_EXCEPTION){}
-        if(test==CLASS_NOT_FOUND){}
-        if(test==SQL_EXCEPTION){}
-        ResultSet resultSet=(ResultSet)resultObject;
-        try{
-            while(resultSet.next()){
+    Vector<String> getModeNames(String article) {
+        Vector<String> modeNames = new Vector<>();
+        String query = "SELECT * FROM `ка`.`"+article+"_ресурсы`";
+        Object resultObject = execQuery(query);
+        int test = verifyResult(resultObject);
+        if (test == CLASS_CAST_EXCEPTION) {
+        }
+        if (test == CLASS_NOT_FOUND) {
+        }
+        if (test == SQL_EXCEPTION) {
+        }
+        ResultSet resultSet = (ResultSet) resultObject;
+        try {
+            while (resultSet.next()) {
                 modeNames.add(resultSet.getString("idрежима"));
             }
-        }catch (SQLException ex){}
+        } catch (SQLException ex) {
+        }
         return modeNames;
     }
-    Vector<String> queryToAlgorithms(String article){
-        String query="SELECT * FROM "+article+"_алгоритмы";
+    Vector<String> queryToAlgorithms(String article) {
+        String query = "SELECT * FROM " + article + "_алгоритмы";
         Vector<String> stringVector = new Vector<>();
         Object resultObject = execQuery(query);
         if (verifyResult(resultObject) == OK) {
@@ -721,20 +805,20 @@ public class DB {
         }
         return stringVector;
     }
-    Vector<String> getAlgorithmInfo(String article,String algorithmName){
-        String query="SELECT * FROM `ка`.`"+algorithmName+"_"+article+"`;";
+    Vector<String> getAlgorithmInfo(String article, String algorithmName) {
+        String query = "SELECT * FROM `ка`.`" + algorithmName + "_" + article + "`;";
         Vector<String> stringVector = new Vector<>();
         Object resultObject = execQuery(query);
         if (verifyResult(resultObject) == OK) {
             try {
                 ResultSet resultSet = (ResultSet) resultObject;
                 while (resultSet.next()) {
-                    stringVector.add(resultSet.getString("изделие")+
-                    resultSet.getString("подсистема")+
-                    resultSet.getString("устройство")+
-                    resultSet.getString("режим")+
-                    resultSet.getString("задержка")+
-                    resultSet.getString("отношение"));
+                    stringVector.add(resultSet.getString("изделие") +
+                            resultSet.getString("подсистема") +
+                            resultSet.getString("устройство") +
+                            resultSet.getString("режим") + " " +
+                            resultSet.getString("задержка") + " " +
+                            resultSet.getString("отношение"));
                 }
             } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
@@ -752,11 +836,224 @@ public class DB {
         }
         return stringVector;
     }
+    Vector<String> getArticleResources(String articleName) {
+        String query = "SELECT * FROM `ка`.`" + articleName + "_ресурсы`";
+        Vector<String> resultList = new Vector<>();
+        Object resultObject = execQuery(query);
+        int test = verifyResult(resultObject);
+        if (test == CLASS_NOT_FOUND) {
+            resultList.add(Integer.toString(CLASS_NOT_FOUND));
+            return resultList;
+        }
+        if (test == SQL_EXCEPTION) {
+            resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        if (test == CLASS_CAST_EXCEPTION) {
+            resultList.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return resultList;
+        }
+        ResultSet resultSet = (ResultSet) resultObject;
+        try {
+            while (resultSet.next()) {
+                int i = 1;
+                String result = resultSet.getString(i);
+                while (result != null) {
+                    i++;
+                    result = resultSet.getString(i);
+                    resultList.add(result);
+                }
+            }
+        } catch (SQLException sqlE) {
+            //resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        return resultList;
+
+    }
+    Vector<String> getArticleResourceNames(String articleName) {
+        Vector<String> resultList = new Vector<>();
+        String query = "SELECT * FROM `ка`.`" + articleName + "_ресурсы_наименования`";
+        Object resultObject = execQuery(query);
+        int test = verifyResult(resultObject);
+        if (test == CLASS_NOT_FOUND) {
+            resultList.add(Integer.toString(CLASS_NOT_FOUND));
+            return resultList;
+        }
+        if (test == SQL_EXCEPTION) {
+            resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        if (test == CLASS_CAST_EXCEPTION) {
+            resultList.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return resultList;
+        }
+        ResultSet resultSet = (ResultSet) resultObject;
+        try {
+            while (resultSet.next()) {
+                int i = 1;
+                String result = resultSet.getString(i);
+                while (result != null) {
+                    i++;
+                    result = resultSet.getString(i);
+                    resultList.add(result);
+                }
+            }
+        } catch (SQLException sqlE) {
+            //resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        return resultList;
+    }
+    Vector<String> getUsedArticleResourcesIfEmpty(String articleName) {
+        Vector<String> resultVector = new Vector<>();
+        try {
+            BufferedReader reader = Files.newBufferedReader(Paths.get("C:\\Users\\igord\\IdeaProjects\\Prototype v0.3\\src\\com\\company\\used_resources.txt"));
+            String line = "";
+            while ((line = reader.readLine()) != null) {
+                if ((line.length()>1)&&line.substring(line.indexOf("<"), line.indexOf(">")).equals(articleName)) {
+                    line = line.replace("<" + articleName + ">", "");
+                    line = line.trim();
+                    String[] splittedLine = line.split("\t");
+                    resultVector.addAll(Arrays.asList(splittedLine));
+                    break;
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return resultVector;
+    }
+    Vector<String> getArticleMeasurements(String articleName){
+        String query = "SELECT * FROM `ка`.`" + articleName + "_ресурсы_наименования`";
+        Vector<String> resultList = new Vector<>();
+        Object resultObject = execQuery(query);
+        int test = verifyResult(resultObject);
+        if (test == CLASS_NOT_FOUND) {
+            resultList.add(Integer.toString(CLASS_NOT_FOUND));
+            return resultList;
+        }
+        if (test == SQL_EXCEPTION) {
+            resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        if (test == CLASS_CAST_EXCEPTION) {
+            resultList.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return resultList;
+        }
+        ResultSet resultSet = (ResultSet) resultObject;
+        try {
+            while (resultSet.next()) {
+                int i = 1;
+                String result = resultSet.getString(i);
+                while (result != null) {
+                    i++;
+                    result = resultSet.getString(i);
+                    resultList.add(result);
+                }
+            }
+        } catch (SQLException sqlE) {
+            //resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        return resultList;
+
+    }
+    String getUsedArticleResources(String articleName) {
+        String line = "";
+        try {
+            BufferedReader reader = Files.newBufferedReader(Paths.get("C:\\Users\\igord\\IdeaProjects\\Prototype v0.3\\src\\com\\company\\used_resources.txt"));
+            while ((line = reader.readLine()) != null) {
+                if ((line.length()>1)&&line.substring(line.indexOf("<"), line.indexOf(">") + 1).equals("<" + articleName + ">")) {
+                    line = line.replace("<" + articleName + ">", "");
+                    line = line.trim();
+                    break;
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return line;
+    }
+    Vector<String> getResourcesNames(String articleName){
+        String query = "SELECT * FROM `ка`.`" + articleName + "_ресурсы_названия`";
+        Vector<String> resultList = new Vector<>();
+        Object resultObject = execQuery(query);
+        int test = verifyResult(resultObject);
+        if (test == CLASS_NOT_FOUND) {
+            resultList.add(Integer.toString(CLASS_NOT_FOUND));
+            return resultList;
+        }
+        if (test == SQL_EXCEPTION) {
+            resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        if (test == CLASS_CAST_EXCEPTION) {
+            resultList.add(Integer.toString(CLASS_CAST_EXCEPTION));
+            return resultList;
+        }
+        ResultSet resultSet = (ResultSet) resultObject;
+        try {
+            while (resultSet.next()) {
+                int i = 1;
+                String result = resultSet.getString(i);
+                while (result != null) {
+                    i++;
+                    result = resultSet.getString(i);
+                    resultList.add(result);
+                }
+            }
+        } catch (SQLException sqlE) {
+            int i=0;
+            //resultList.add(Integer.toString(SQL_EXCEPTION));
+            return resultList;
+        }
+        return resultList;
+
+    }
+
     //For ThreadDBUpdater
-    int addArticle(String articleName,Integer lastIndex){
+    int addArticle(String articleName, Integer lastIndex, ArrayList<String> columns, ArrayList<Double> columnsValues, ArrayList<String> valuesMeasurement) {
         lastIndex++;
-        String addQuery="INSERT INTO `ка`.`изделия`(имя_изделия) VALUES('"+articleName+"');";
-        String createQuery=" CREATE TABLE `"+articleName+"` (\n" +
+        String addResourcesQueryString = "";
+        String insertResourcesQueryString = "";
+        String insertResourcesNamesQueryString = "";
+        String insertSecondPart="";
+        for (int i = 0; i < columns.size(); i++) {
+            int b=i+1;
+            //addResourcesQueryString += "`"+columns.get(i)+"` varchar(45) DEFAULT NULL,\n";
+            addResourcesQueryString += "`ресурс_"+b+"` varchar(45) DEFAULT NULL,\n";
+            if(i!=(columns.size()-1)) {
+                insertSecondPart+="'"+columns.get(i)+"',";
+                insertResourcesQueryString += "'" + columnsValues.get(i) + "',";
+                insertResourcesNamesQueryString += "'" + valuesMeasurement.get(i)+"',";
+            }
+            else{
+                insertSecondPart+="'"+columns.get(i)+"'";
+                insertResourcesQueryString += "'" + columnsValues.get(i) + "'";
+                insertResourcesNamesQueryString += "'" + valuesMeasurement.get(i)+"'";
+            }
+        }
+        String createResourceNamesQuery="CREATE TABLE `ка`.`"+articleName+"_ресурсы_названия` (\n" +
+                "  `id` INT NOT NULL,\n" +addResourcesQueryString+
+                "  PRIMARY KEY (`id`))\n" +
+                "ENGINE = InnoDB\n" +
+                "DEFAULT CHARACTER SET = utf8;\n";
+        String insertIntoResourceNames="INSERT INTO "+articleName+"_ресурсы_названия VALUES (1,"+insertSecondPart+");";
+        String createResourcesQuery = " CREATE TABLE `" + articleName + "_ресурсы` (\n" +
+                "  `id` int(11) NOT NULL,\n" + addResourcesQueryString +
+                "  PRIMARY KEY (`id`)\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        String insertIntoResourcesQuery = "INSERT INTO `" + articleName + "_ресурсы` VALUES(1," + insertResourcesQueryString + ")";
+        String createResourcesNamesQuery = " CREATE TABLE `" + articleName + "_ресурсы_наименования` (\n" +
+                "  `id` int(11) NOT NULL,\n" + addResourcesQueryString +
+                "  PRIMARY KEY (`id`)\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        String insertResourcesNamesQuery = "INSERT INTO `" + articleName + "_ресурсы_наименования` VALUES(1," + insertResourcesNamesQueryString + " )";
+        String addQuery = "INSERT INTO `ка`.`изделия`(имя_изделия) VALUES('" + articleName + "');";
+        String createQuery = " CREATE TABLE `" + articleName + "` (\n" +
                 "  `id` int(11) NOT NULL,\n" +
                 "  `имя` varchar(45) DEFAULT NULL,\n" +
                 "  `подсистемы` varchar(45) DEFAULT NULL,\n" +
@@ -764,28 +1061,39 @@ public class DB {
                 "  UNIQUE KEY `id_UNIQUE` (`id`),\n" +
                 "  UNIQUE KEY `подсистемы_UNIQUE` (`подсистемы`),\n" +
                 "  KEY `FK_имя_изделия` (`имя`),\n" +
-                "  CONSTRAINT `FK_имя_изделия_"+articleName+"` FOREIGN KEY (`имя`) REFERENCES `изделия` (`имя_изделия`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                "  CONSTRAINT `FK_имя_изделия_" + articleName + "` FOREIGN KEY (`имя`) REFERENCES `изделия` (`имя_изделия`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8 ";
-        String createAlgQuery=" CREATE TABLE `"+articleName+"_алгоритмы` (\n" +
+        String createAlgQuery = " CREATE TABLE `" + articleName + "_алгоритмы` (\n" +
                 "  `id_алгоритмы` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `имя_алгоритма` varchar(45) DEFAULT NULL,\n" +
                 "  PRIMARY KEY (`id_алгоритмы`),\n" +
                 "  UNIQUE KEY `имя алгоритма_UNIQUE` (`имя_алгоритма`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
-        int resultState=execUpdate(createQuery);
-        int resultState1=execUpdate(addQuery);
-        int resultState2=execUpdate(createAlgQuery);
-        if(resultState==CLASS_NOT_FOUND||resultState1==CLASS_NOT_FOUND||resultState2==CLASS_NOT_FOUND) {
-            return CLASS_NOT_FOUND;
-        }
-        if(resultState==SQL_EXCEPTION||resultState1==SQL_EXCEPTION||resultState2==SQL_EXCEPTION) {
-            return SQL_EXCEPTION;
-        }
-        if(resultState==CLASS_CAST_EXCEPTION||resultState1==CLASS_CAST_EXCEPTION||resultState2==CLASS_CAST_EXCEPTION) {
-            return CLASS_CAST_EXCEPTION;
+        try {
+            savepoint = connection.setSavepoint();
+            connection.setAutoCommit(false);
+            statement.executeUpdate(createResourceNamesQuery);
+            statement.executeUpdate(insertIntoResourceNames);
+            statement.executeUpdate(createResourcesQuery);
+            statement.executeUpdate(createResourcesNamesQuery);
+            statement.executeUpdate(insertIntoResourcesQuery);
+            statement.executeUpdate(insertResourcesNamesQuery);
+            statement.executeUpdate(createQuery);
+            statement.executeUpdate(addQuery);
+            statement.executeUpdate(createAlgQuery);
+
+            connection.commit();
+
+        } catch (SQLException ex) {
+            try {
+                connection.rollback(savepoint);
+            } catch (SQLException rollbackExc) {
+                return SQL_EXCEPTION;
+            }
         }
         return OK;
     }
+
     int addSubsystem(String articleName,String subsystemName,Integer lastIndex){
         //Поставить константы,Запрос на добавление в подсистемы
         //Вычислять индекс самостоятельно
@@ -845,11 +1153,13 @@ public class DB {
                 "  KEY `FK_прибор` (`idприбор`),\n" +
                 "  CONSTRAINT `FK_прибор"+articleName+"_"+subsystemName+"_"+deviceName+"` FOREIGN KEY (`idприбор`) REFERENCES `приборы_"+articleName+"_"+subsystemName+"` (`idприбор_for`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        Vector<String> resourceVector=getArticleResources(articleName);
+        String resources="";
+        for(int i=0;i<resourceVector.size();i++){
+            resources+="`потребление_ресурса"+(i+1)+"` double DEFAULT NULL,\n";
+        }
         String createModeTable=" CREATE TABLE `ка`.`режимы_"+deviceName+"_"+articleName+"_"+subsystemName+"` (\n" +
-                "  `idрежима` varchar(45) NOT NULL,\n" +
-                "  `потребление_ресурса1` double DEFAULT NULL,\n" +
-                "  `потребление_ресурса2` double DEFAULT NULL,\n" +
-                "  `потребление_ресурса3` double DEFAULT NULL,\n" +
+                "  `idрежима` varchar(45) NOT NULL,\n" +resources+
                 "  PRIMARY KEY (`idрежима`),\n" +
                 "  UNIQUE KEY `idрежимы_датчик1_UNIQUE` (`idрежима`),\n" +
                 "  KEY `FK_idрежима_д1_idx` (`idрежима`),\n" +
@@ -885,11 +1195,14 @@ public class DB {
                 "  KEY `FK_название_датчика_idx_"+articleName+"_"+subsystemName+"_"+sensorName+"+` (`idдатчик`),\n"+
                 "  CONSTRAINT `FK_прибор"+articleName+"_"+subsystemName+"_"+sensorName+"` FOREIGN KEY (`idдатчик`) REFERENCES `датчики_"+articleName+"_"+subsystemName+"` (`название`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        Vector<String> resourceVector=getArticleResources(articleName);
+        String resources="";
+        for(int i=0;i<resourceVector.size();i++){
+            resources+="`потребление_ресурса"+(i+1)+"` double DEFAULT NULL,\n";
+        }
+
         String createModeTable=" CREATE TABLE `ка`.`режимы_"+sensorName+"_"+articleName+"_"+subsystemName+"` (\n" +
-                "  `idрежима` varchar(45) NOT NULL,\n" +
-                "  `потребление_ресурса1` double DEFAULT NULL,\n" +
-                "  `потребление_ресурса2` double DEFAULT NULL,\n" +
-                "  `потребление_ресурса3` double DEFAULT NULL,\n" +
+                "  `idрежима` varchar(45) NOT NULL,\n" +resources+
                 "  PRIMARY KEY (`idрежима`),\n" +
                 "  UNIQUE KEY `idрежимы_датчик1_UNIQUE` (`idрежима`),\n" +
                 "  KEY `FK_idрежима_д1_idx` (`idрежима`),\n" +
@@ -912,13 +1225,22 @@ public class DB {
         return OK;
     }
 
-    int addMode(String articleName,String subsystemName,String deviceName,String mode,double modeConsumption1,double modeConsumption2,double modeConsumption3,Integer lastIndex) {
+    int addMode(String articleName,String subsystemName,String deviceName,String mode,Vector<Double> resourceConsumption,Integer lastIndex) {
         //create table with modes,add mode to device and add mode to mode table
+        //Получить ресурсы изделия, узнать количество, сформировать запрос
         lastIndex++;
         String addModeToDeviceQuery="INSERT INTO `ка`."+deviceName+"_"+articleName+"_"+subsystemName+" VALUES ('"+deviceName+"','"+mode+"',"+lastIndex+")";
+        String secondAddPart="";
+        for(int i=0;i<resourceConsumption.size();i++){
+            if(i==resourceConsumption.size()-1){
+                secondAddPart+=Double.toString(resourceConsumption.get(i));
+            }
+            else
+                secondAddPart+=Double.toString(resourceConsumption.get(i))+", ";
 
+        }
         String addQuery="INSERT INTO `ка`.`режимы_"+deviceName+"_"+articleName+"_"+subsystemName+"` " +
-                "VALUES('"+mode+"',"+modeConsumption1+","+modeConsumption2+","+modeConsumption3+");";
+                "VALUES('"+mode+"',"+secondAddPart+");";
         int resultState1=execUpdate(addModeToDeviceQuery);
         int resultState=execUpdate(addQuery);
         if(resultState==CLASS_NOT_FOUND||resultState1==CLASS_NOT_FOUND) {
@@ -931,5 +1253,266 @@ public class DB {
             return CLASS_CAST_EXCEPTION;
         }
         return OK;
+    }
+
+    // TODO: 11/14/2017 Make it better
+    //TODO: TRY TO MAKE IT FUCKING BETTER
+    void changeArticleResources(String article, Vector<JTextField> textFieldVector) {
+        //И обновить таблицы всех ресурсов режжимов и энергопотребление
+        int count = 1;
+        Vector<Integer> emptyFieldsIndexes=new Vector<>();
+        for (int i = 0; i < textFieldVector.size(); i += 3) {
+            String textFieldVal = textFieldVector.get(i).getText();
+            if(textFieldVal.isEmpty())
+                emptyFieldsIndexes.add(i);
+            if(!textFieldVal.isEmpty())
+                count++;
+            }
+
+        Vector<String> defaultArticleResources = getArticleResources(article);
+        int defaultSize = defaultArticleResources.size();
+        int res;
+
+        //TODO: Запрос и изменение таблиц потребления режимов у данного изделия through ALTER
+        Vector<String> subsystems = queryToArticle(article);
+        for (String subsystem : subsystems) {
+            Vector<String> sensorName = getSensorNames(article, subsystem);
+            Vector<String> deviceName = getDeviceNames(article, subsystem);
+            if (sensorName.size() > 0) {
+                for (String str : sensorName) {
+                    int differ =   (count - 1)-defaultSize;
+                    int currentTableSize = getModeColumnsCount(article, subsystem, str);
+                    if (differ > 0) {
+                        String add="";
+                        int sum=currentTableSize+differ;
+                        for(;currentTableSize<sum;currentTableSize++){
+                            if(currentTableSize<(sum-1)) {
+                                add += "ADD COLUMN `потребление_ресурса" + (currentTableSize + 1) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + currentTableSize + "`,\n";
+
+                            }
+                            else {
+                                add += "ADD COLUMN `потребление_ресурса" + (currentTableSize + 1) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + currentTableSize + "`;\n";
+
+                            }
+                        }
+                        //ADDING
+                        String addQuery = "ALTER TABLE `ка`.`режимы_" + str + "_" + article + "_" + subsystem + "` \n" +add;
+                        res=execUpdate(addQuery);
+                    }
+                    if (differ < 0) {
+                        Vector<String> pastModeUsage=new Vector<>();
+                        Vector<String> resultVec=queryToSensor(article.toLowerCase(),subsystem.toLowerCase(),str.toLowerCase());
+                        String[] splittedVec=resultVec.get(0).split("\t");
+                        for(String string:splittedVec)
+                            pastModeUsage.add(string);
+                        pastModeUsage.remove(0);
+                        for(int i:emptyFieldsIndexes){
+                            pastModeUsage.remove(i-2);
+                        }
+                        Vector<String> resourceConsumptionVector=new Vector<>();
+                        //DROPPING
+                        String resourceConsumption="потребление_ресурса1";
+                        resourceConsumptionVector.add(resourceConsumption);
+                        String dropPart = "";
+                        String addPart = "ADD COLUMN `потребление_ресурса" + 1 + "` DOUBLE NULL DEFAULT 0 AFTER `idрежима`,\n";
+                        for (int i = 0; i < defaultSize; i++) {
+                            if (i < (defaultSize - 1)) {
+                                dropPart += "DROP COLUMN `потребление_ресурса" + (i + 1) + "`,\n";
+                            } else {
+                                dropPart += "DROP COLUMN `потребление_ресурса" + (i + 1) + "`;\n";
+                            }
+                        }
+                        for(int i=0;i<(defaultSize+differ-1);i++){
+                            if (i < (defaultSize - 1)) {
+                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i+1) + "`,\n";
+                                resourceConsumptionVector.add("потребление_ресурса"+(i + 2));
+                            } else {
+                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i+1) + "`;\n";
+                                resourceConsumptionVector.add("потребление_ресурса"+(i + 2));
+                            }
+                        }
+                        if(dropPart.lastIndexOf(',')==(dropPart.length()-2)){
+                            dropPart=dropPart.substring(0,dropPart.length()-2);
+                        }
+                        if(addPart.lastIndexOf(',')==(addPart.length()-2)){
+                            addPart=addPart.substring(0,addPart.length()-2);
+                        }
+                        String dropModeQuery = "ALTER TABLE `ка`.`режимы_"+str.toLowerCase()+"_"+article+"_"+subsystem.toLowerCase()+"` \n" + dropPart;
+                        res = execUpdate(dropModeQuery);
+                        String addModeQuery = "ALTER TABLE `ка`.`режимы_"+str.toLowerCase()+"_"+article+"_"+subsystem.toLowerCase()+"` \n" + addPart;
+                        res = execUpdate(addModeQuery);
+                        Vector<String> secondInsertPart=new Vector<>();
+                        for(int i=0;i<pastModeUsage.size();i++){
+                            if(i<(pastModeUsage.size()-1))
+                                secondInsertPart.add(resourceConsumptionVector.get(i)+"="+pastModeUsage.get(i));
+                            else
+                                secondInsertPart.add(resourceConsumptionVector.get(i)+"="+pastModeUsage.get(i));
+                        }
+                        for(int i=0;i<secondInsertPart.size();i++) {
+                            String insertToModeQuery = "UPDATE `ка`.`режимы_" + str.toLowerCase() + "_" + article + "_" + subsystem.toLowerCase() + "` SET " + secondInsertPart.get(i) + " WHERE idрежима='режим1'";
+                            res = execUpdate(insertToModeQuery);
+                        }
+                        int c = 0;
+                    }
+                }
+            }
+            if (deviceName.size() > 0) {
+                for (String str : deviceName) {
+                    int differ = (count - 1)-defaultSize;
+                    int currentTableSize = getModeColumnsCount(article, subsystem, str);
+                    if (differ > 0) {
+                        String add="";
+                        int sum=currentTableSize+differ;
+                        for(;currentTableSize<sum;currentTableSize++){
+                            if(currentTableSize<(sum-1)) {
+                                add += "ADD COLUMN `потребление_ресурса" + (currentTableSize + 1) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + currentTableSize + "`,\n";
+                            }
+                            else
+                                add += "ADD COLUMN `потребление_ресурса" + (currentTableSize + 1) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + currentTableSize + "`;\n";
+                        }
+                        //ADDING
+                        String addQuery = "ALTER TABLE `ка`.`режимы_" + str + "_" + article + "_" + subsystem + "` \n" +add;
+                        res=execUpdate(addQuery);
+                    }
+                    if (differ < 0) {
+                        Vector<String> pastModeUsage=new Vector<>();
+                        Vector<String> resultVec=queryToDevice(article.toLowerCase(),subsystem.toLowerCase(),str.toLowerCase());
+                        String[] splittedVec=resultVec.get(0).split("\t");
+                        for(String string:splittedVec)
+                            pastModeUsage.add(string);
+                        pastModeUsage.remove(0);
+                        for(int i:emptyFieldsIndexes){
+                            pastModeUsage.remove(i-2);
+                        }
+                        Vector<String> resourceConsumptionVector=new Vector<>();
+                        //DROPPING
+                        String resourceConsumption="потребление_ресурса1";
+                        resourceConsumptionVector.add(resourceConsumption);
+                        String dropPart = "";
+                        String addPart = "ADD COLUMN `потребление_ресурса" + 1 + "` DOUBLE NULL DEFAULT 0 AFTER `idрежима`,\n";
+                        for (int i = 0; i < defaultSize; i++) {
+                            if (i < (defaultSize - 1)) {
+                                dropPart += "DROP COLUMN `потребление_ресурса" + (i + 1) + "`,\n";
+                            } else {
+                                dropPart += "DROP COLUMN `потребление_ресурса" + (i + 1) + "`;\n";
+                            }
+                        }
+                        for(int i=0;i<(defaultSize+differ-1);i++){
+                            if (i < (defaultSize - 1)) {
+                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i+1) + "`,\n";
+                                resourceConsumptionVector.add("потребление_ресурса"+(i + 2));
+                            } else {
+                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i+1) + "`;\n";
+                                resourceConsumptionVector.add("потребление_ресурса"+(i + 2));
+                            }
+                        }
+                        if(dropPart.lastIndexOf(',')==(dropPart.length()-2)){
+                            dropPart=dropPart.substring(0,dropPart.length()-2);
+                        }
+                        if(addPart.lastIndexOf(',')==(addPart.length()-2)){
+                            addPart=addPart.substring(0,addPart.length()-2);
+                        }
+                        String dropModeQuery = "ALTER TABLE `ка`.`режимы_"+str.toLowerCase()+"_"+article+"_"+subsystem.toLowerCase()+"` \n" + dropPart;
+                        res = execUpdate(dropModeQuery);
+                        String addModeQuery = "ALTER TABLE `ка`.`режимы_"+str.toLowerCase()+"_"+article+"_"+subsystem.toLowerCase()+"` \n" + addPart;
+                        res = execUpdate(addModeQuery);
+                        Vector<String> secondInsertPart=new Vector<>();
+                        for(int i=0;i<pastModeUsage.size();i++){
+                            if(i<(pastModeUsage.size()-1))
+                                secondInsertPart.add(resourceConsumptionVector.get(i)+"="+pastModeUsage.get(i));
+                            else
+                                secondInsertPart.add(resourceConsumptionVector.get(i)+"="+pastModeUsage.get(i));
+                        }
+                        for(int i=0;i<secondInsertPart.size();i++) {
+                            String insertToModeQuery = "UPDATE `ка`.`режимы_" + str.toLowerCase() + "_" + article + "_" + subsystem.toLowerCase() + "` SET " + secondInsertPart.get(i) + " WHERE idрежима='режим1'";
+                            res = execUpdate(insertToModeQuery);
+                            int c = 0;
+                        }
+                    }
+                }
+            }
+        }
+        String secondPart = "";
+        String insertResourcesQueryString = "";
+        String insertResourcesNamesString="";
+         defaultArticleResources = getArticleResources(article);
+         defaultSize = defaultArticleResources.size();
+        String dropQuery = "DROP TABLE `ка`.`" + article + "_ресурсы`;";
+         res = execUpdate(dropQuery);
+         count = 1;
+        String insertResourcesNamesQueryString = "";
+        for (int i = 0; i < textFieldVector.size(); i += 3) {
+            String nameFieldVal=textFieldVector.get(i).getText();
+            String textFieldVal = textFieldVector.get(i+1).getText();
+            if (!textFieldVal.isEmpty()) {
+                if (count == (textFieldVector.size() / 3)) {
+                    insertResourcesNamesString+="'"+nameFieldVal+"'";
+                    insertResourcesQueryString += "'" + textFieldVector.get(i+1).getText() + "'";
+                    insertResourcesNamesQueryString += "'" + textFieldVector.get(i + 2).getText() + "'";
+
+                } else {
+                    insertResourcesNamesString+="'"+nameFieldVal+"',";
+                    insertResourcesQueryString += "'" + textFieldVector.get(i+1).getText() + "',";
+                    insertResourcesNamesQueryString += "'" + textFieldVector.get(i + 2).getText() + "',";
+                }
+                secondPart += "`ресурс_" + count + "` varchar(45) DEFAULT NULL,\n";
+                count++;
+            }
+
+        }
+        if(insertResourcesQueryString.lastIndexOf(',')==(insertResourcesNamesQueryString.length()-1)){
+            insertResourcesQueryString=insertResourcesQueryString.substring(0,insertResourcesQueryString.length()-1);
+        }
+        if(insertResourcesNamesQueryString.lastIndexOf(',')==(insertResourcesNamesQueryString.length()-1)){
+            insertResourcesNamesQueryString=insertResourcesNamesQueryString.substring(0,insertResourcesNamesQueryString.length()-1);
+        }
+        String dropResourceNamesQuery="DROP TABLE `ка`.`"+article+"_ресурсы_названия`;";
+        res=execUpdate(dropResourceNamesQuery);
+        String createResourceNamesQuery="CREATE TABLE `ка`.`"+article+"_ресурсы_названия` (\n" +
+                "  `id` INT NOT NULL,\n" +secondPart+
+                "  PRIMARY KEY (`id`))\n" +
+                "ENGINE = InnoDB\n" +
+                "DEFAULT CHARACTER SET = utf8;\n";
+        res=execUpdate(createResourceNamesQuery);
+        String insertIntoResourcesNames="INSERT INTO "+article+"_ресурсы_названия VALUES (1,"+insertResourcesQueryString+")";
+        res=execUpdate(insertIntoResourcesNames);
+        String createQuery = " CREATE TABLE `" + article + "_ресурсы` (\n" +
+                "  `id` int(11) NOT NULL,\n" + secondPart +
+                "  PRIMARY KEY (`id`)\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        res = execUpdate(createQuery);
+        String insertQuery = "INSERT INTO `" + article + "_ресурсы` VALUES(1," + insertResourcesQueryString + ")";
+        res = execUpdate(insertQuery);
+        dropQuery = "DROP TABLE `ка`.`" + article + "_ресурсы_наименования`;";
+        res = execUpdate(dropQuery);
+        String createMeasTable = " CREATE TABLE `" + article + "_ресурсы_наименования` (\n" +
+                "  `id` int(11) NOT NULL,\n" + secondPart +
+                "  PRIMARY KEY (`id`)\n" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
+        res = execUpdate(createMeasTable);
+        String insertMeas = "INSERT INTO `" + article + "_ресурсы_наименования` VALUES(1," + insertResourcesNamesQueryString + " )";
+        res = execUpdate(insertMeas);
+        int n = 0;
+    }
+    int getModeColumnsCount(String article,String subsystemName,String deviceName){
+        String query="SELECT * FROM режимы_"+deviceName+"_"+article+"_"+subsystemName+"";
+        int count=0;
+        Object resultObject = execQuery(query);
+        if (verifyResult(resultObject) == OK) {
+            try {
+                ResultSet resultSet = (ResultSet) resultObject;
+                int i=2;
+                while (resultSet.next()) {
+                    String result="";
+                    while((result=resultSet.getString(i))!=null){
+                        count++;
+                        i++;
+                    }
+                }
+            } catch (SQLException ex) {
+
+            }
+        }
+        return count;
     }
 }
