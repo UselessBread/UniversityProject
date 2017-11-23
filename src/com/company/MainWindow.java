@@ -7,7 +7,6 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
@@ -30,6 +29,7 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 public class MainWindow extends JPanel implements ActionListener,MouseListener,TreeSelectionListener {
     private static final String ADD_RESOURCE="Добавить ресурс";
+    private static final String CANGE_MODE_CONSUMPTION="Изменить потребление";
     private final String NEW_ALGORITHM = "Create new algorithm";
     private final String OPEN = "Open algorithm";
     private final String ADD="Add to db";
@@ -38,12 +38,12 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
     private final String RUN="Run";
     private static Path used_namesPath= Paths.get("C:\\Users\\igord\\IdeaProjects\\Prototype v0.3\\src\\com\\company\\used_names.txt");
     private Path usedResourcesPath=Paths.get("C:\\Users\\igord\\IdeaProjects\\Prototype v0.3\\src\\com\\company\\used_resources.txt");
-    static Charset charset=Charset.forName("UTF-8");
+    private static Charset charset=Charset.forName("UTF-8");
     private static Vector<SystemInfo> systemInfoVector=new Vector<>();
     private static Vector<SystemInfo> systemInfoVectorForSaving=new Vector<>();
     private DB DBC=new DB();
     private static JPanel mainPanel = new JPanel();
-    static JFrame mainFrame;
+    private static JFrame mainFrame;
     private JTextArea openedAlgorithms=new JTextArea(5,30);
     static JTextArea resourceMonitor=new JTextArea(1,30);
     private JTextArea algorithmInfo=new JTextArea(20,20);
@@ -53,15 +53,18 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
     private boolean dc;
     private ArrayList<String> usingDevices=new ArrayList<>();
     private ExecutorService executor= Executors.newSingleThreadExecutor();
-    JPopupMenu popupMenu=new JPopupMenu();
+    private JPopupMenu popupMenu=new JPopupMenu();
+    private JPopupMenu modeConsumptionPopup =new JPopupMenu();
     private static int popupX,popupY;
 
 
 
     public MainWindow() {
         resourceMonitor.setEditable(false);
+        algorithmInfo.setEditable(false);
         Font resourceMonitorFont=new Font("defaultTextFont",Font.PLAIN,12);
         resourceMonitor.setFont(resourceMonitorFont);
+        algorithmInfo.setFont(resourceMonitorFont);
         openedAlgorithms.setEditable(false);
         openedAlgorithms.getFont();
         Font defaultTextFont=new Font("defaultTextFont",Font.PLAIN,14);
@@ -99,7 +102,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         JSplitPane treeWithInfo=new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         treeWithInfo.setTopComponent(treeSplitPane);
         JScrollPane algorithmInfoScrollPane=new JScrollPane(algorithmInfo);
-        algorithmInfoScrollPane.setPreferredSize(new Dimension(950,60));
+        algorithmInfoScrollPane.setPreferredSize(new Dimension(950,100));
         treeWithInfo.setBottomComponent(algorithmInfoScrollPane);
 
         JSplitPane splitPane=new JSplitPane();
@@ -115,10 +118,18 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
 
         add(mainPanel);
         PopupActionListener popupActionListener=new PopupActionListener();
-        JMenuItem menuItem=new JMenuItem("Добавить ресурс");
+        JMenuItem menuItem=new JMenuItem("Изменить ресурсы");
+        JMenuItem anotherMenuItem=new JMenuItem("Изменить ресурсы");
         popupMenu.add(menuItem);
+        JMenuItem modeConsumptionChanging=new JMenuItem("Изменить потребление ресурсов");
+        modeConsumptionPopup.add(anotherMenuItem);
+        modeConsumptionPopup.add(modeConsumptionChanging);
         menuItem.addActionListener(popupActionListener);
         menuItem.setActionCommand(ADD_RESOURCE);
+        anotherMenuItem.addActionListener(popupActionListener);
+        anotherMenuItem.setActionCommand(ADD_RESOURCE);
+        modeConsumptionChanging.addActionListener(popupActionListener);
+        modeConsumptionChanging.setActionCommand(CANGE_MODE_CONSUMPTION);
     }
 
     static void createAndShowGUI() {
@@ -159,6 +170,8 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             try {
                 BufferedWriter writer=Files.newBufferedWriter(usedResourcesPath,TRUNCATE_EXISTING);
                 writer.close();
+                //Reset resource monitor
+                resourceMonitor.setText("");
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
@@ -328,7 +341,16 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         if(e.isPopupTrigger()){
             popupX=e.getX();
             popupY=e.getY();
-            popupMenu.show(e.getComponent(),popupX,popupY);
+            TreePath path=tree.getPathForLocation(popupX,popupY);
+            String pathString=path.toString().replace("[","");
+            pathString=pathString.replace("]","");
+            String[] splittedPathString=pathString.split(",");
+            if(splittedPathString.length==6&&pathString.contains("Системы")){
+                modeConsumptionPopup.show(e.getComponent(),popupX,popupY);
+            }
+            else {
+                popupMenu.show(e.getComponent(), popupX, popupY);
+            }
         }
         clicks=0;
         dc=false;
@@ -389,10 +411,18 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        if(e.isPopupTrigger()){
-            popupX=e.getX();
-            popupY=e.getY();
-            popupMenu.show(e.getComponent(),popupX,popupY);
+        if(e.isPopupTrigger()) {
+            popupX = e.getX();
+            popupY = e.getY();
+            TreePath path = tree.getPathForLocation(popupX, popupY);
+            String pathString = path.toString().replace("[", "");
+            pathString = pathString.replace("]", "");
+            String[] splittedPathString = pathString.split(",");
+            if (splittedPathString.length == 6&&pathString.contains("Системы")) {
+                modeConsumptionPopup.show(e.getComponent(), popupX, popupY);
+            } else {
+                popupMenu.show(e.getComponent(), popupX, popupY);
+            }
         }
     }
     @Override
@@ -801,5 +831,8 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
     }
     static int getPopupY(){
         return popupY;
+    }
+    static String getCangeModeConsumption(){
+        return MainWindow.CANGE_MODE_CONSUMPTION;
     }
 }

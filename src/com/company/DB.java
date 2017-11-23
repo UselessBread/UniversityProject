@@ -1494,7 +1494,24 @@ public class DB {
         res = execUpdate(insertMeas);
         int n = 0;
     }
-    int getModeColumnsCount(String article,String subsystemName,String deviceName){
+    void changeModeConsumption(String article,String subsystem,String device,String pastModeName,Vector<JTextField> textFieldVector){
+        String newName=textFieldVector.get(0).getText();
+        ArrayList<String> newConsumption=new ArrayList<>();
+        for(int i=1;i<textFieldVector.size();i++){
+            newConsumption.add(textFieldVector.get(i).getText());
+        }
+        String deleteModeQuery="DELETE FROM режимы_"+device+"_"+article+"_"+subsystem+" WHERE idрежима='"+pastModeName+"';";
+        int res=execUpdate(deleteModeQuery);
+        String secondInsertPart="";
+        for(String str:newConsumption ){
+            secondInsertPart+=str+",";
+        }
+        secondInsertPart=secondInsertPart.substring(0,secondInsertPart.length()-1);
+        String insertModeQuery="INSERT INTO режимы_"+device+"_"+article+"_"+subsystem+" VALUES ('"+newName+"',"+secondInsertPart+");";
+        res=execUpdate(insertModeQuery);
+        int i=0;
+    }
+    private int getModeColumnsCount(String article,String subsystemName,String deviceName){
         String query="SELECT * FROM режимы_"+deviceName+"_"+article+"_"+subsystemName+"";
         int count=0;
         Object resultObject = execQuery(query);
