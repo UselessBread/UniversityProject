@@ -619,7 +619,7 @@ public class DB {
                 "  UNIQUE INDEX `idname_UNIQUE` (`id` ASC))\n" +
                 "ENGINE = InnoDB\n" +
                 "DEFAULT CHARACTER SET = utf8;\n";
-        String addQuery = "INSERT INTO " + article + "_алгоритмы(`имя_алгоритма`) VALUES('" + name + "');";
+        String addQuery = "INSERT INTO `" + article + "_алгоритмы` (`имя_алгоритма`) VALUES('" + name + "');";
         int result1 = execUpdate(addQuery);
         int result = execUpdate(query);
 
@@ -785,7 +785,7 @@ public class DB {
         return modeNames;
     }
     Vector<String> queryToAlgorithms(String article) {
-        String query = "SELECT * FROM `" + article + "`_алгоритмы";
+        String query = "SELECT * FROM `" + article + "_алгоритмы`";
         Vector<String> stringVector = new Vector<>();
         Object resultObject = execQuery(query);
         if (verifyResult(resultObject) == OK) {
@@ -810,36 +810,39 @@ public class DB {
         }
         return stringVector;
     }
-    Vector<String> getAlgorithmInfo(String article, String algorithmName) {
+    Vector<Vector<String>> getAlgorithmInfo(String article, String algorithmName) {
         String query = "SELECT * FROM `ка`.`" + algorithmName + "_" + article + "`;";
+        Vector<Vector<String>> result=new Vector<>();
         Vector<String> stringVector = new Vector<>();
         Object resultObject = execQuery(query);
         if (verifyResult(resultObject) == OK) {
             try {
                 ResultSet resultSet = (ResultSet) resultObject;
                 while (resultSet.next()) {
-                    stringVector.add(resultSet.getString("изделие") +
-                            resultSet.getString("подсистема") +
-                            resultSet.getString("устройство") +
-                            resultSet.getString("режим") + " " +
-                            resultSet.getString("задержка") + " " +
-                            resultSet.getString("отношение"));
+                    stringVector=new Vector<>();
+                    stringVector.add(resultSet.getString("изделие") );
+                    stringVector.add(resultSet.getString("подсистема") );
+                    stringVector.add(resultSet.getString("устройство") );
+                    stringVector.add(resultSet.getString("режим")  );
+                    stringVector.add(resultSet.getString("задержка") );
+                    stringVector.add(resultSet.getString("отношение"));
+                    result.add(stringVector);
                 }
             } catch (SQLException SQLexc) {
                 stringVector.add(Integer.toString(SQL_EXCEPTION));
-                return stringVector;
+                return result;
             }
         } else if (verifyResult(resultObject) == CLASS_NOT_FOUND) {
             stringVector.add(Integer.toString(CLASS_NOT_FOUND));
-            return stringVector;
+            return result;
         } else if (verifyResult(resultObject) == SQL_EXCEPTION) {
             stringVector.add(Integer.toString(SQL_EXCEPTION));
-            return stringVector;
+            return result;
         } else if (verifyResult(resultObject) == CLASS_CAST_EXCEPTION) {
             stringVector.add(Integer.toString(CLASS_CAST_EXCEPTION));
-            return stringVector;
+            return result;
         }
-        return stringVector;
+        return result;
     }
     Vector<String> getArticleResources(String articleName) {
         String query = "SELECT * FROM `ка`.`" + articleName + "_ресурсы`";
@@ -1504,8 +1507,7 @@ public class DB {
         String insertMeas = "INSERT INTO `" + article + "_ресурсы_наименования` VALUES(1," + insertResourcesNamesQueryString + " )";
         res = execUpdate(insertMeas);
         int n = 0;
-        MainWindow mw=new MainWindow();
-        mw.getSystemInfoVector();
+
     }
     void changeModeConsumption(String article,String subsystem,String device,String pastModeName,Vector<JTextField> textFieldVector){
         String newName=textFieldVector.get(0).getText();

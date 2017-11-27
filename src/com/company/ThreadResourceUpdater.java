@@ -1,10 +1,13 @@
 package com.company;
 
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.util.ArrayList;
 import java.util.Vector;
 
 public class ThreadResourceUpdater implements Runnable,WindowListener {
@@ -104,6 +107,38 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
         confirmButton.addActionListener(e -> {
             DBConnection.changeArticleResources(article,textFieldVector);
             mainFrame.dispose();
+            //Replace resources with new
+            DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
+            DefaultMutableTreeNode rootNode=(DefaultMutableTreeNode) treeModel.getRoot();
+            int i = 0;
+            Object articleNode;
+            while (!((articleNode = treeModel.getChild(rootNode, i)).toString().equals(article))) {
+                if (i == rootNode.getChildCount()-1) {
+                    JOptionPane.showMessageDialog(mainFrame, "error in first cycle", "Error", JOptionPane.ERROR_MESSAGE);
+                    break;
+                }
+                i++;
+            }
+            DefaultMutableTreeNode resourcesNode=(DefaultMutableTreeNode) ((DefaultMutableTreeNode)articleNode).getChildAt(1);
+            ArrayList<DefaultMutableTreeNode> pastNodes=new ArrayList<>();
+            if(resourcesNode.getChildCount()!=0) {
+                for (i = 0; i < resourcesNode.getChildCount(); i++) {
+                    pastNodes.add((DefaultMutableTreeNode)resourcesNode.getChildAt(i));
+
+                }
+            }
+            for(DefaultMutableTreeNode node:pastNodes){
+                treeModel.removeNodeFromParent(node);
+            }
+
+            Vector<String> resourceNamesUpdate=DBConnection.getResourcesNames(article);
+            Vector<String> articleResourcesUpdate=DBConnection.getArticleResources(article);
+            Vector<String> resourcesMeasurementsUpdate=DBConnection.getArticleMeasurements(article);
+            for(i=0;i<resourceNamesUpdate.size();i++) {
+                String resultString = resourceNamesUpdate.get(i) + ": " + articleResourcesUpdate.get(i) + " " + resourcesMeasurementsUpdate.get(i);
+                DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(resultString);
+                treeModel.insertNodeInto(newNode,resourcesNode,resourcesNode.getChildCount());
+            }
         });
 
         mainPanel.add(resourcePanel);

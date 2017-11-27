@@ -184,6 +184,36 @@ implements ActionListener,WindowListener{
                     DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
                     DefaultMutableTreeNode rootNode=(DefaultMutableTreeNode) treeModel.getRoot();
                     treeModel.insertNodeInto(new DefaultMutableTreeNode(chosenName),rootNode,rootNode.getChildCount());
+                    //Если rootNode.getChildCount==1, то выбрать первый элемент, если нет, то найти
+                    Object articleNode;
+                    if(rootNode.getChildCount()==1)
+                        articleNode=rootNode.getChildAt(0);
+                    else{
+                        int i=0;
+                        while (!((articleNode = treeModel.getChild(rootNode, i)).toString().equals(chosenName))) {
+                            if (i == rootNode.getChildCount()-1) {
+                                JOptionPane.showMessageDialog(DBUpdaterFrame, "error in first cycle", "Error", JOptionPane.ERROR_MESSAGE);
+                                break;
+                            }
+                            i++;
+                        }
+                    }
+                    DefaultMutableTreeNode subsystemNode=new DefaultMutableTreeNode("Бортовая аппаратура");
+                    DefaultMutableTreeNode resourceNode=new DefaultMutableTreeNode("Ресурсы");
+                    DefaultMutableTreeNode algorithmNode=new DefaultMutableTreeNode("Алгоритмы");
+                    DefaultMutableTreeNode variantNode=new DefaultMutableTreeNode("Варианты");
+                    treeModel.insertNodeInto(subsystemNode,((DefaultMutableTreeNode)articleNode),((DefaultMutableTreeNode)(articleNode)).getChildCount());
+                    treeModel.insertNodeInto(resourceNode,((DefaultMutableTreeNode)articleNode),((DefaultMutableTreeNode)(articleNode)).getChildCount());
+                    treeModel.insertNodeInto(algorithmNode,((DefaultMutableTreeNode)articleNode),((DefaultMutableTreeNode)(articleNode)).getChildCount());
+                    treeModel.insertNodeInto(variantNode,algorithmNode,algorithmNode.getChildCount());
+                    Vector<String> resourceNames=DBConnection.getResourcesNames(chosenName);
+                    Vector<String> resourceValues=DBConnection.getArticleResources(chosenName);
+                    Vector<String> resourceMeasurements=DBConnection.getArticleMeasurements(chosenName);
+                    for(int i=0;i<resourceNames.size();i++){
+                        String resultString=resourceNames.get(i)+": "+resourceValues.get(i)+" "+resourceMeasurements.get(i);
+                        DefaultMutableTreeNode newNode=new DefaultMutableTreeNode(resultString);
+                        resourceNode.add(newNode);
+                    }
                     verifyResult(result);
                     resetUI();
                 }
@@ -479,48 +509,58 @@ implements ActionListener,WindowListener{
                                 }
 
                                 if (okFlag) {
-                                    int result=DBConnection.addMode(selectedArticle, selectedSubsystem, selectedDevice, chosenName, resources,lastIndex);
+                                    int result = DBConnection.addMode(selectedArticle, selectedSubsystem, selectedDevice, chosenName, resources, lastIndex);
 
-                                    JTree tree=MainWindow.getTree();
-                                    DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
-                                    DefaultMutableTreeNode rootNode=(DefaultMutableTreeNode) treeModel.getRoot();
-                                    i=0;
+                                    JTree tree = MainWindow.getTree();
+                                    DefaultTreeModel treeModel = (DefaultTreeModel) tree.getModel();
+                                    DefaultMutableTreeNode rootNode = (DefaultMutableTreeNode) treeModel.getRoot();
+                                    i = 0;
                                     Object articleNode;
-                                    while(!((articleNode=treeModel.getChild(rootNode,i)).toString().equals(selectedArticle))){
-                                        if(i==rootNode.getChildCount()-1) {
-                                            JOptionPane.showMessageDialog(DBUpdaterFrame,"error in first cycle","Error",JOptionPane.ERROR_MESSAGE);
+                                    while (!((articleNode = treeModel.getChild(rootNode, i)).toString().equals(selectedArticle))) {
+                                        if (i == rootNode.getChildCount() - 1) {
+                                            JOptionPane.showMessageDialog(DBUpdaterFrame, "error in first cycle", "Error", JOptionPane.ERROR_MESSAGE);
                                             break;
                                         }
                                         i++;
                                     }
-                                    DefaultMutableTreeNode systemNode=(DefaultMutableTreeNode) treeModel.getChild(articleNode,0);
+                                    DefaultMutableTreeNode systemNode = (DefaultMutableTreeNode) treeModel.getChild(articleNode, 0);
                                     Object subsystemNode;
                                     i = 0;
                                     while (!(subsystemNode = treeModel.getChild(systemNode, i)).toString().toLowerCase().equals(selectedSubsystem)) {
-                                        if (i == systemNode.getChildCount()-1&&systemNode.getChildCount()>1) {
+                                        if (i == systemNode.getChildCount() - 1 && systemNode.getChildCount() > 1) {
                                             JOptionPane.showMessageDialog(DBUpdaterFrame, "error in second cycle", "Error", JOptionPane.ERROR_MESSAGE);
                                             break;
                                         }
                                         i++;
                                     }
                                     Object deviceNode;
-                                    i=0;
-                                    DefaultMutableTreeNode temp=(DefaultMutableTreeNode)subsystemNode;
-                                    if(((DefaultMutableTreeNode) subsystemNode).getChildCount()!=0) {
-                                        while (!((deviceNode = treeModel.getChild(subsystemNode, i)).toString().equals(selectedDevice))) {
+                                    i = 0;
+                                    DefaultMutableTreeNode temp = (DefaultMutableTreeNode) subsystemNode;
+                                    if (((DefaultMutableTreeNode) subsystemNode).getChildCount() != 0) {
+                                        while (!((deviceNode = treeModel.getChild(subsystemNode, i)).toString().toLowerCase().equals(selectedDevice))) {
                                             if (i == ((DefaultMutableTreeNode) subsystemNode).getChildCount() - 1) {
                                                 JOptionPane.showMessageDialog(DBUpdaterFrame, "error in third cycle", "Error", JOptionPane.ERROR_MESSAGE);
                                                 break;
                                             }
                                             i++;
                                         }
+                                        for (Double dbl : resources) {
+                                            double td = dbl;
+                                            int q = (int) td;
+                                            chosenName += "\t"+q;
+                                        }
                                         treeModel.insertNodeInto(new DefaultMutableTreeNode(chosenName), (DefaultMutableTreeNode) deviceNode, ((DefaultMutableTreeNode) deviceNode).getChildCount());
+                                    } else {
+                                        for (Double dbl : resources) {
+                                            double td = dbl;
+                                            int q = (int) td;
+                                            chosenName += q;
+                                            treeModel.insertNodeInto(new DefaultMutableTreeNode(chosenName), (DefaultMutableTreeNode) subsystemNode, ((DefaultMutableTreeNode) subsystemNode).getChildCount());
+                                        }
                                     }
-                                    else
-                                        treeModel.insertNodeInto(new DefaultMutableTreeNode(chosenName), (DefaultMutableTreeNode) subsystemNode, ((DefaultMutableTreeNode) subsystemNode).getChildCount());
-
                                     verifyResult(result);
                                     resetUI();
+
                                 }
                             }
                         }

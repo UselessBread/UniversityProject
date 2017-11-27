@@ -122,12 +122,10 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         splitPane.setTopComponent(buttonPanel);
         JScrollPane openedScrollPane=new JScrollPane(openedAlgorithms);
 
-
         JSplitPane algorithmWithDescription=new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         algorithmWithDescription.setTopComponent(algorithmDescription);
         algorithmWithDescription.setBottomComponent(openedScrollPane);
         algorithmDescription.setEnabled(false);
-
 
         splitPane.setBottomComponent(algorithmWithDescription);
         JSplitPane withMonitor=new JSplitPane(JSplitPane.VERTICAL_SPLIT,splitPane,resourceMonitor);
@@ -170,21 +168,14 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         if(e.getActionCommand().equals(RUN)){
             (new ThreadRunWindow()).start();
         }
-        if(e.getActionCommand().equals(SAVE)){
-            boolean ok=true;
-            String logText=openedAlgorithms.getText();
-            String[] splittedLogText=logText.split("\n");
-            String article=splittedLogText[0].split(" ")[1];
-            for(String str:splittedLogText){
-                if(!str.contains(article)){
-                    System.out.print("Different Articles");
-                    JOptionPane.showMessageDialog(mainFrame,"Different Articles");
-                    ok=false;
-                }
-            }
-            if(ok) {
-                saveToDB(article);
-            }
+        if(e.getActionCommand().equals(SAVE)) {
+            TreePath selectionPath = tree.getSelectionPath();
+            String stringPath = selectionPath.toString();
+            String[] splittedStringPath = stringPath.split(",");
+            String article = splittedStringPath[1].replace("]", "").trim();
+
+            saveToDB(article);
+
         }
         if(e.getActionCommand().equals(CLEAR)){
             try {
@@ -192,6 +183,8 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 writer.close();
                 //Reset resource monitor
                 resourceMonitor.setText("");
+                setResourceMonitor();
+
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
@@ -221,7 +214,6 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         Vector<DeviceNode> deviceNodes=createDeviceLeaves(subsystemNodes);
         createDeviceModeLeaves(deviceNodes);
     }
-    //public static
     private Vector<TopNode> createTopNodes(DefaultMutableTreeNode top){
         Vector<String> result=DBC.queryToArticles();
         verifyResult(result,mainFrame);
@@ -265,16 +257,20 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         return subsystemNodes;
     }
     private void createAlgorithmLeaves(Vector<TopNode> topNodes){
-        for(TopNode topNode:topNodes){
-            DefaultMutableTreeNode systemNode=new DefaultMutableTreeNode("Алгоритмы");
-            DefaultMutableTreeNode variantNode=new DefaultMutableTreeNode("Варианты");
+        for(TopNode topNode:topNodes) {
+            DefaultMutableTreeNode systemNode = new DefaultMutableTreeNode("Алгоритмы");
+            DefaultMutableTreeNode variantNode = new DefaultMutableTreeNode("Варианты");
             systemNode.add(variantNode);
             topNode.getTopNode().add(systemNode);
-            String topNodeName=topNode.getName();
-            Vector<String> result=DBC.queryToAlgorithms(topNodeName);
-            for(String str:result) {
-                DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(str);
-                variantNode.add(newNode);
+            String topNodeName = topNode.getName();
+            Vector<String> result = DBC.queryToAlgorithms(topNodeName);
+            if(result.size()>0) {
+                if (!result.get(0).equals("-12")) {
+                    for (String str : result) {
+                        DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(str);
+                        variantNode.add(newNode);
+                    }
+                }
             }
         }
     }
@@ -366,7 +362,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             String pathString=path.toString().replace("[","");
             pathString=pathString.replace("]","");
             String[] splittedPathString=pathString.split(",");
-            if(splittedPathString.length==6&&pathString.contains("Системы")){
+            if(splittedPathString.length==6&&pathString.contains("Бортовая аппаратура")){
                 modeConsumptionPopup.show(e.getComponent(),popupX,popupY);
             }
             else {
@@ -383,13 +379,21 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 TreePath path=tree.getPathForLocation(x,y);
                 String[] splittedPath=path.toString().split(",");
                 if(splittedPath.length==5&&path.toString().contains("Варианты")){
-                    Vector<String> result=getAlgorithmInfo(splittedPath);
-                    algorithmInfo.setText("");
-                    for(String str:result){
-                        //handle with time for algorithm info
-                        SystemInfo systemInfo=new SystemInfo(str.trim());
-                        handleWithTimeForAlgorithmInfo(systemInfo);
+                    Vector<Vector<String>> resultVector=getAlgorithmInfo(splittedPath);
 
+                    algorithmInfo.setText("");
+                    for(Vector<String> vector:resultVector) {
+                        {
+                            String article=vector.get(0);
+                            String subsystem=vector.get(1);
+                            String deviceName=vector.get(2);
+                            String mode=vector.get(3);
+                            String delay=vector.get(4);
+                            String relation=vector.get(5);
+                            //handle with time for algorithm info
+                            SystemInfo systemInfo = new SystemInfo(article,subsystem,deviceName,mode,delay,relation);
+                            handleWithTimeForAlgorithmInfo(systemInfo);
+                        }
                     }
                 }
             }
@@ -405,18 +409,29 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                         TreePath path=tree.getPathForLocation(x,y);
                         String string=path.toString();
                         String[] splittedPath=string.split(",");
-                        if(clicks==2&&splittedPath.length==6&&path.toString().contains("Системы")) {
+                        if(clicks==2&&splittedPath.length==6&&path.toString().contains("Бортовая аппаратура")) {
                             askForDelay(splittedPath);
                         }
                         if(clicks==2&&splittedPath.length==5&&path.toString().contains("Варианты")){
                             //Добавление алгоритма в окно
-                            Vector<String> result=getAlgorithmInfo(splittedPath);
-                            for(String str:result){
-                                SystemInfo systemInfo=new SystemInfo(str.trim());
-                                systemInfoVector.add(systemInfo);
-                                handleWithTime(systemInfo);
-                                recountResources(systemInfo.getArticle(),systemInfo.getMode(),systemInfo);
-                                usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
+                            Vector<Vector<String>> resultVector=getAlgorithmInfo(splittedPath);
+
+                            algorithmInfo.setText("");
+                            for(Vector<String> vector:resultVector) {
+                                {
+                                    String article=vector.get(0);
+                                    String subsystem=vector.get(1);
+                                    String deviceName=vector.get(2);
+                                    String mode=vector.get(3);
+                                    String delay=vector.get(4);
+                                    String relation=vector.get(5);
+                                    //handle with time for algorithm info
+                                    SystemInfo systemInfo = new SystemInfo(article,subsystem,deviceName,mode,delay,relation);
+                                    systemInfoVector.add(systemInfo);
+                                    handleWithTime(systemInfo);
+                                    recountResources(systemInfo.getArticle(),systemInfo.getMode(),systemInfo);
+                                    usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
+                                }
                             }
                         }
                     }
@@ -439,7 +454,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             String pathString = path.toString().replace("[", "");
             pathString = pathString.replace("]", "");
             String[] splittedPathString = pathString.split(",");
-            if (splittedPathString.length == 6&&pathString.contains("Системы")) {
+            if (splittedPathString.length == 6&&pathString.contains("Бортовая аппаратура")) {
                 modeConsumptionPopup.show(e.getComponent(), popupX, popupY);
             } else {
                 popupMenu.show(e.getComponent(), popupX, popupY);
@@ -460,7 +475,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         JTextField delayField=new JTextField(10);
         delayField.setEditable(true);
         String logContent=openedAlgorithms.getText();
-        String[] formats={"Часы","Минуты","Секунды","Миллисекунды"};
+        String[] formats={"Часы","Минуты","Секунды"};
         JComboBox<String>delayFormatChooser=new JComboBox<>(formats);
         delayFormatChooser.setSelectedIndex(2);
         String[] logContentSplit = logContent.split("\n");
@@ -473,6 +488,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             }
         }
         JComboBox<String>queueChooser = new JComboBox<>(deviceToQueueChooser);
+        queueChooser.setVisible(false);
         queueChooser.setSelectedIndex(0);
         //Set delay activator
         JCheckBox delayActivator=new JCheckBox("Включить задержку");
@@ -609,11 +625,11 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         }catch(IOException ex){}
         return true;
     }
-    private Vector<String> getAlgorithmInfo(String[] splittedPath){
+    private Vector<Vector<String>> getAlgorithmInfo(String[] splittedPath){
         String article=splittedPath[1].toLowerCase().trim();
         String algorithm=splittedPath[splittedPath.length-1].split("]")[0].toLowerCase().trim();
-        Vector<String> result=DBC.getAlgorithmInfo(article,algorithm);
-        verifyResult(result,mainFrame);
+        Vector<Vector<String>> result=DBC.getAlgorithmInfo(article,algorithm);
+        //verifyResult(result,mainFrame);
         return result;
     }
     private void handleWithTime(SystemInfo systemInfo){
@@ -625,7 +641,15 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c","").trim();
                 int lastTime = Integer.parseInt(lastTimeStr);
                 String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
+                String delayFormat=systemInfo.getDelay().split("\\d")[1];
+
                 int time = Integer.parseInt(delay[0]);
+                if(delayFormat.equals("Часы")){
+                    time=time*3600;
+                }
+                if(delayFormat.equals("Минуты")){
+                    time=time*60;
+                }
                 //if delay has been set
                 int newTime = time + lastTime;
                 openedAlgorithms.append("=" + newTime + "c|" + systemInfo.getArticle() +" "+ systemInfo.getSubsystem()+" " +
@@ -633,7 +657,14 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             }
             else{
                 String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
+                String delayFormat=systemInfo.getDelay().split("\\d")[1];
                 int time = Integer.parseInt(delay[0]);
+                if(delayFormat.equals("Часы")){
+                    time=time*3600;
+                }
+                if(delayFormat.equals("Минуты")){
+                    time=time*60;
+                }
                 openedAlgorithms.append("="+time+"c|"+systemInfo.getArticle()+" "+systemInfo.getSubsystem()+" "+systemInfo.getDeviceName()+" "+ systemInfo.getMode()+"\n");
             }
 
@@ -646,6 +677,15 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 lastLine = text.split("\n")[openedAlgorithms.getLineCount() - 2];
                 String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c", "").trim();
                 lastTime = Integer.parseInt(lastTimeStr);
+                lastTime = Integer.parseInt(lastTimeStr);
+                String delayFormat=systemInfo.getDelay().split("\\d")[1];
+
+                if(delayFormat.equals("Часы")){
+                    lastTime=lastTime*3600;
+                }
+                if(delayFormat.equals("Минуты")){
+                    lastTime=lastTime*60;
+                }
             }
             else
                 lastTime=0;
@@ -661,7 +701,16 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c","").trim();
                 int lastTime = Integer.parseInt(lastTimeStr);
                 String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
+
                 int time = Integer.parseInt(delay[0]);
+                String delayFormat=systemInfo.getDelay().split("\\d")[1];
+
+                if(delayFormat.equals("Часы")){
+                    time=time*3600;
+                }
+                if(delayFormat.equals("Минуты")){
+                    time=time*60;
+                }
                 //if delay has been set
                 int newTime = time + lastTime;
                 algorithmInfo.append("=" + newTime + "c|" + systemInfo.getArticle() +" "+ systemInfo.getSubsystem()+" "+systemInfo.getDeviceName()+
@@ -670,6 +719,13 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             else{
                 String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
                 int time = Integer.parseInt(delay[0]);
+                String delayFormat=systemInfo.getDelay().split("\\d")[1];
+                if(delayFormat.equals("Часы")){
+                    time=time*3600;
+                }
+                if(delayFormat.equals("Минуты")){
+                    time=time*60;
+                }
                 algorithmInfo.append("="+time+"c|"+systemInfo.getArticle()+" "+systemInfo.getSubsystem()+" "+
                         systemInfo.getDeviceName()+" "+ systemInfo.getMode()+"\n");
             }
@@ -683,6 +739,14 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 lastLine = text.split("\n")[algorithmInfo.getLineCount() - 2];
                 String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c", "").trim();
                 lastTime = Integer.parseInt(lastTimeStr);
+                String delayFormat=systemInfo.getDelay().split("\\d")[1];
+
+                if(delayFormat.equals("Часы")){
+                    lastTime=lastTime*3600;
+                }
+                if(delayFormat.equals("Минуты")){
+                    lastTime=lastTime*60;
+                }
             }
             else
                 lastTime=0;
@@ -696,41 +760,47 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
         //Make backup and search for saved for chosen article
         TreePath oldSelection = e.getOldLeadSelectionPath();
         if (oldSelection != null) {
-            String openedAlgorithmsText = openedAlgorithms.getText();
-            String article = oldSelection.toString().split(",")[1].trim();
-            article=article.replace("]","");
-            article=article.trim();
-            Vector<String> resourcesForLabel=DBC.getResourcesNames(article);
-            String labelString="Время|   " +"Усторйство и режим  "+"              |             ";
-            for(String str:resourcesForLabel){
-                labelString+=str+"              ";
-            }
-            algorithmDescription.setText(labelString);
-            //String[] splittedStringPath = oldSelection.toString().split(",");
-            ArticleBackup backup = new ArticleBackup(openedAlgorithmsText, systemInfoVector);
-            systemInfoVector.clear();
-            openedAlgorithms.setText("");
-            articleBackupHashMap.put(article, backup);
-            if (articleBackupHashMap.size() > 1) {
-                //Find content for new selection
-                String newArticle = e.getNewLeadSelectionPath().toString().split(",")[1].trim();
-                String[] splittedStringPath = e.getNewLeadSelectionPath().toString().split(",");
-                newArticle=newArticle.replace("]","");
-                newArticle=newArticle.trim();
-                ArticleBackup pastBackup;
-                if ((pastBackup = articleBackupHashMap.get(newArticle)) != null) {
-                    openedAlgorithms.setText(pastBackup.getOpenedAlgorithmsContent());
-                    systemInfoVector = pastBackup.getSystemInfoVector();
+            String[] oldSplittedPath = oldSelection.toString().split(",");
+            String oldArticleName = oldSplittedPath[1].replace("]", "").trim();
+            TreePath selectionPath = tree.getSelectionPath();
+            String stringPath = selectionPath.toString();
+            String[] splittedStringPath = stringPath.split(",");
+            String newArticleName = splittedStringPath[1].replace("]", "").trim();
+            if (!oldArticleName.equals(newArticleName)) {
+                String openedAlgorithmsText = openedAlgorithms.getText();
+                String article = oldSelection.toString().split(",")[1].trim();
+                article = article.replace("]", "");
+                article = article.trim();
+                Vector<String> resourcesForLabel = DBC.getResourcesNames(article);
+                String labelString = "Время|   " + "Усторйство и режим  " + "              |             ";
+                for (String str : resourcesForLabel) {
+                    labelString += str + "              ";
+                }
+                algorithmDescription.setText(labelString);
+                //String[] splittedStringPath = oldSelection.toString().split(",");
+                ArticleBackup backup = new ArticleBackup(openedAlgorithmsText, systemInfoVector);
+                systemInfoVector.clear();
+                openedAlgorithms.setText("");
+                articleBackupHashMap.put(article, backup);
+                if (articleBackupHashMap.size() > 1) {
+                    //Find content for new selection
+                    String newArticle = e.getNewLeadSelectionPath().toString().split(",")[1].trim();
+                    newArticle = newArticle.replace("]", "");
+                    newArticle = newArticle.trim();
+                    ArticleBackup pastBackup;
+                    if ((pastBackup = articleBackupHashMap.get(newArticle)) != null) {
+                        openedAlgorithms.setText(pastBackup.getOpenedAlgorithmsContent());
+                        systemInfoVector = pastBackup.getSystemInfoVector();
+                        setResourceMonitor();
+                    } else {
+                        setResourceMonitor();
+                    }
+                }
+                if (articleBackupHashMap.size() == 1) {
                     setResourceMonitor();
                 }
-                else{
-                    setResourceMonitor();
-                }
             }
-            if (articleBackupHashMap.size() == 1) {
-                setResourceMonitor();
-            }
-        }
+    }
         if (oldSelection == null) {
             setResourceMonitor();
         }
@@ -793,7 +863,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 }
                 resourcesNames=DBC.getArticleResourceNames(articleName);
                 Vector<String> articleResources=DBC.getArticleResources(articleName);
-                Vector<String> resourceNames=DBC.getResourcesNames(articleName);
+            Vector<String> resourceNames=DBC.getResourcesNames(articleName);
                 String newResourcesString="";
                 for(int i=0;i<size;i++){
                     newResourcesString+=resourceNames.get(i)+":"+Double.toString(currentResourceUsageList.get(i)) + "/" + articleResources.get(i) + resourcesNames.get(i)+"\t";
