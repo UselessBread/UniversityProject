@@ -1,0 +1,217 @@
+package com.company;
+
+import javax.swing.*;
+import javax.swing.tree.TreePath;
+import java.awt.*;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
+import java.util.Vector;
+
+public class ThreadResourceUpdater implements Runnable,WindowListener {
+    private String mode;
+    private JPanel mainPanel;
+    private JPanel resourcePanel=new JPanel();
+    private JFrame mainFrame;
+    private DB DBConnection=new DB();
+    private Vector<JTextField> textFieldVector=new Vector<>();
+    ThreadResourceUpdater(String mode){
+        this.mode=mode;
+    }
+
+    @Override
+    public void run() {
+        resourcePanel.setLayout(new GridLayout(0,6));
+        if(mode.equals(MainWindow.getADD_RESOURCE())) {
+            updateArticleResources();
+        }
+        if(mode.equals(MainWindow.getCangeModeConsumption())){
+            changeModeConsumption();
+        }
+    }
+    private void setUpResourceAddingUI(String article){
+        mainPanel=new JPanel();
+        mainPanel.setOpaque(true);
+        mainFrame=new JFrame("Изменение ресурсов в "+article+"");
+        mainFrame.setContentPane(mainPanel);
+        mainFrame.addWindowListener(this);
+        mainFrame.setLocationRelativeTo(MainWindow.getMainFrame());
+        mainFrame.setPreferredSize(new Dimension(800,500));
+        mainFrame.pack();
+        mainFrame.setVisible(true);
+    }
+    private void updateArticleResources(){
+        //Set up interface with three columns: resource name,resource val,resource measure
+        JTree tree=MainWindow.getTree();
+        int x= MainWindow.getPopupX();
+        int y= MainWindow.getPopupY();
+        TreePath path=tree.getPathForLocation(x,y);
+        String pathString=path.toString().replace("[","");
+        pathString=pathString.replace("]","");
+        String[] splittedPathString=pathString.split(",");
+        String article=splittedPathString[1].trim();
+        setUpResourceAddingUI(article);
+        Vector<String> resourceNames=DBConnection.getResourcesNames(article);
+        Vector<String> articleResources=DBConnection.getArticleResources(article);
+        Vector<String> resourcesMeasurements=DBConnection.getArticleMeasurements(article);
+        for(int i=0;i<articleResources.size();i++){
+            JTextField resourceNameField=new JTextField(resourceNames.get(i));
+            JLabel resourceNameFieldLabel=new JLabel("Имя ресурса"+(i+1));
+            resourceNameFieldLabel.setLabelFor(resourceNameField);
+            JTextField resourceValueField=new JTextField(articleResources.get(i));
+            JTextField resourceMeasurement=new JTextField(resourcesMeasurements.get(i));
+            JLabel resourceValueFieldLabel=new JLabel("Значение ресурса"+(i+1));
+            resourceValueFieldLabel.setLabelFor(resourceValueField);
+            JLabel resourceMeasurementLabel=new JLabel("Еденицы измерения");
+            resourceMeasurementLabel.setLabelFor(resourceMeasurement);
+            resourcePanel.add(resourceNameFieldLabel);
+            resourcePanel.add(resourceNameField);
+            resourcePanel.add(resourceValueFieldLabel);
+            resourcePanel.add(resourceValueField);
+            resourcePanel.add(resourceMeasurementLabel);
+            resourcePanel.add(resourceMeasurement);
+            textFieldVector.add(resourceNameField);
+            textFieldVector.add(resourceValueField);
+            textFieldVector.add(resourceMeasurement);
+        }
+        JButton addButton=new JButton ("Добавить");
+        resourcePanel.add(addButton);
+        addButton.addActionListener(e -> {
+            JTextField resourceNameField=new JTextField();
+            JLabel resourceNameFieldLabel=new JLabel("Имя ресурса");
+            resourceNameFieldLabel.setLabelFor(resourceNameField);
+            JTextField resourceValueField=new JTextField();
+            JTextField resourceMeasurement=new JTextField();
+            JLabel resourceValueFieldLabel=new JLabel("Значение ресурса");
+            resourceValueFieldLabel.setLabelFor(resourceValueField);
+            JLabel resourceMeasurementLabel=new JLabel("Еденицы измерения");
+            resourceMeasurementLabel.setLabelFor(resourceMeasurement);
+            resourcePanel.add(resourceNameFieldLabel);
+            resourcePanel.add(resourceNameField);
+            resourcePanel.add(resourceValueFieldLabel);
+            resourcePanel.add(resourceValueField);
+            resourcePanel.add(resourceMeasurementLabel);
+            resourcePanel.add(resourceMeasurement);
+            resourcePanel.remove(addButton);
+            resourcePanel.add(addButton);
+            textFieldVector.add(resourceNameField);
+            textFieldVector.add(resourceValueField);
+            textFieldVector.add(resourceMeasurement);
+            updateWindow(mainFrame.getHeight(),mainFrame.getWidth());
+        });
+        JButton confirmButton=new JButton("Изменить");
+        JPanel confirmButtonPanel=new JPanel();
+        confirmButtonPanel.add(confirmButton);
+        confirmButton.addActionListener(e -> {
+            DBConnection.changeArticleResources(article,textFieldVector);
+            mainFrame.dispose();
+        });
+
+        mainPanel.add(resourcePanel);
+        mainPanel.add(confirmButtonPanel);
+    }
+    private void setUpModeConsumptionChangingUI(String article,String subsystem,String device,String mode){
+        mainPanel=new JPanel();
+        mainPanel.setOpaque(true);
+        mainFrame=new JFrame("Изменение ресурсов в "+article+" "+subsystem+" "+device+" "+mode);
+        mainFrame.setContentPane(mainPanel);
+        mainFrame.addWindowListener(this);
+        mainFrame.setLocationRelativeTo(MainWindow.getMainFrame());
+        mainFrame.setPreferredSize(new Dimension(600,200));
+        mainFrame.pack();
+        mainFrame.setVisible(true);
+    }
+    private void changeModeConsumption(){
+        JTree tree=MainWindow.getTree();
+        int x= MainWindow.getPopupX();
+        int y= MainWindow.getPopupY();
+        TreePath path=tree.getPathForLocation(x,y);
+        String pathString=path.toString().replace("[","");
+        pathString=pathString.replace("]","");
+        String[] splittedPathString=pathString.split(",");
+        String mode=splittedPathString[5].trim();
+        String device=splittedPathString[4].trim();
+        String subsystem=splittedPathString[3].trim();
+        String article=splittedPathString[1].trim();
+        setUpModeConsumptionChangingUI(article,subsystem,device,mode);
+        Vector<String> resourceNames=DBConnection.getResourcesNames(article);
+        Vector<String> resourceValues=DBConnection.queryToDevice(article,subsystem,device);
+        if(resourceValues.size()>0&&resourceValues.get(0).equals(Integer.toString(DBConnection.SQL_EXCEPTION))){
+            resourceValues=DBConnection.queryToSensor(article,subsystem,device);
+        }
+        Vector<String> resourceMeasurement=DBConnection.getArticleMeasurements(article);
+        //init window with choose resource consumption params
+        String[] splittedMode=mode.split("\t");
+
+        String modeName=splittedMode[0].trim();
+
+        JTextField modeNameTextField=new JTextField(modeName);
+        JLabel modeNameLabel=new JLabel("Имя режима:");
+        modeNameLabel.setLabelFor(modeNameTextField);
+        mainPanel.add(modeNameLabel);
+        mainPanel.add(modeNameTextField);
+        textFieldVector.add(modeNameTextField);
+        String currentMode="";
+        for(String str:resourceValues) {
+            if(str.contains(modeName))
+                currentMode = str;
+        }
+        String[] splittedCurrentMode=currentMode.split("\t");
+        for(int i=0;i<resourceNames.size();i++){
+            JTextField textField=new JTextField(splittedCurrentMode[(i+1)]);
+            JLabel textLabel=new JLabel(resourceNames.get(i)+":");
+            textLabel.setLabelFor(textField);
+            JLabel measurementLabel=new JLabel(resourceMeasurement.get(i));
+            measurementLabel.setLabelFor(textField);
+            mainPanel.add(textLabel);
+            mainPanel.add(textField);
+            mainPanel.add(measurementLabel);
+            textFieldVector.add(textField);
+        }
+        JButton submitButton=new JButton("Подтвердить");
+        mainPanel.add(submitButton);
+        submitButton.addActionListener(e->{
+            DBConnection.changeModeConsumption(article,subsystem,device,modeName,textFieldVector);
+        });
+    }
+
+
+    @Override
+    public void windowOpened(WindowEvent e) {
+
+    }
+    @Override
+    public void windowClosing(WindowEvent e) {
+        Thread.currentThread().interrupt();
+    }
+    @Override
+    public void windowClosed(WindowEvent e) {
+
+    }
+    @Override
+    public void windowIconified(WindowEvent e) {
+
+    }
+    @Override
+    public void windowDeiconified(WindowEvent e) {
+
+    }
+    @Override
+    public void windowActivated(WindowEvent e) {
+
+    }
+    @Override
+    public void windowDeactivated(WindowEvent e) {
+
+    }
+
+    private void updateWindow(int height,int width){
+        Dimension dimension;
+        if(mainFrame.getSize().height<height){
+            dimension=new Dimension(width,mainFrame.getSize().height+1);
+        }
+        else {
+            dimension = new Dimension(width, mainFrame.getSize().height - 1);
+        }
+        mainFrame.setSize(dimension);
+    }
+}

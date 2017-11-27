@@ -1,1 +1,1 @@
-new_test/t1/
+tAlg1/tAlg/tAlg01/алгоритм_1/алгоритм_2/multiAlg/
