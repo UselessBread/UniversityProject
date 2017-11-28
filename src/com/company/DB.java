@@ -1159,7 +1159,7 @@ public class DB {
                 "  PRIMARY KEY (`id`,`режимы`),\n" +
                 "  KEY `idрежима_idx` (`режимы`),\n" +
                 "  KEY `FK_прибор` (`idприбор`),\n" +
-                "  CONSTRAINT `FK_прибор"+articleName+"_"+subsystemName+"_"+deviceName+"` FOREIGN KEY (`idприбор`) REFERENCES `приборы_"+articleName+"_"+subsystemName+"` (`idприбор_for`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                "  CONSTRAINT `FK_прибор"+articleName+"_"+deviceName+"` FOREIGN KEY (`idприбор`) REFERENCES `приборы_"+articleName+"_"+subsystemName+"` (`idприбор_for`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
         Vector<String> resourceVector=getArticleResources(articleName);
         String resources="";
@@ -1172,7 +1172,7 @@ public class DB {
                 "  PRIMARY KEY (`idрежима`),\n" +
                 "  UNIQUE KEY `idрежимы_датчик1_UNIQUE` (`idрежима`),\n" +
                 "  KEY `FK_idрежима_д1_idx` (`idрежима`),\n" +
-                "  CONSTRAINT `FK_idрежимы_датчик1_"+articleName+"_"+deviceName+"` FOREIGN KEY (`idрежима`) REFERENCES `"+deviceName+"_"+articleName+"_"+subsystemName+"` (`режимы`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
+                "  CONSTRAINT `FK_idрежимы_"+articleName+"_"+deviceName+"` FOREIGN KEY (`idрежима`) REFERENCES `"+deviceName+"_"+articleName+"_"+subsystemName+"` (`режимы`) ON DELETE CASCADE ON UPDATE CASCADE\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8";
         int resultState2=execUpdate(subsystemAddQuery);
         int resultState1=execUpdate(addQuery);
@@ -1273,7 +1273,7 @@ public class DB {
         for (int i = 0; i < textFieldVector.size(); i += 3) {
             String textFieldVal = textFieldVector.get(i).getText();
             if(textFieldVal.isEmpty())
-                emptyFieldsIndexes.add(i);
+                emptyFieldsIndexes.add(i/3);
             if(!textFieldVal.isEmpty())
                 count++;
             }
@@ -1393,7 +1393,7 @@ public class DB {
                             pastModeUsage.add(string);
                         pastModeUsage.remove(0);
                         for(int i:emptyFieldsIndexes){
-                            pastModeUsage.remove(i-2);
+                            pastModeUsage.remove(i-1);
                         }
                         Vector<String> resourceConsumptionVector=new Vector<>();
                         //DROPPING

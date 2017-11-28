@@ -543,8 +543,8 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                     SystemInfo systemInfo=new SystemInfo(articleName,subsystemName,deviceName,mode,
                             delayField.getText()+delayFormatChooser.getSelectedItem(),(String)queueChooser.getSelectedItem());
                     systemInfoVector.add(systemInfo);
-                    usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
                     recountResources(articleName,mode,systemInfo);
+                    usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
                     handleWithTime(systemInfo);
                     delayFrame.dispose();
                 }
@@ -587,16 +587,14 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                         writeName(name);
                         saveFrame.dispose();
                         openedAlgorithms.setText("");
+                        //TODO:Make it work tomorrow
                         MainWindow.getSystemInfoVectorForSaving().clear();
                        DefaultMutableTreeNode temp=(DefaultMutableTreeNode)tree.getLastSelectedPathComponent();
                        DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
                        DefaultMutableTreeNode articleNode=(DefaultMutableTreeNode) treeModel.getPathToRoot(temp)[1];
-                       DefaultMutableTreeNode algorithmsNode=(DefaultMutableTreeNode)treeModel.getChild(articleNode,1);
+                       DefaultMutableTreeNode algorithmsNode=(DefaultMutableTreeNode)treeModel.getChild(articleNode,2);
                        DefaultMutableTreeNode variantNode=(DefaultMutableTreeNode)treeModel.getChild(algorithmsNode,0);
                        treeModel.insertNodeInto(new DefaultMutableTreeNode(name),variantNode,variantNode.getChildCount());
-                        /*DefaultMutableTreeNode newTop = new DefaultMutableTreeNode("Изделия");
-                        tree=new JTree(newTop);
-                        createTree(newTop);*/
 
                     } else {
                         JOptionPane.showMessageDialog(mainFrame, "Выберите другое имя", "Выберите другое имя", JOptionPane.ERROR_MESSAGE);
@@ -680,15 +678,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 lastLine = text.split("\n")[openedAlgorithms.getLineCount() - 2];
                 String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c", "").trim();
                 lastTime = Integer.parseInt(lastTimeStr);
-                lastTime = Integer.parseInt(lastTimeStr);
-                String delayFormat=systemInfo.getDelay().split("\\d")[1];
 
-                if(delayFormat.equals("Часы")){
-                    lastTime=lastTime*3600;
-                }
-                if(delayFormat.equals("Минуты")){
-                    lastTime=lastTime*60;
-                }
             }
             else
                 lastTime=0;
@@ -742,14 +732,6 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 lastLine = text.split("\n")[algorithmInfo.getLineCount() - 2];
                 String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c", "").trim();
                 lastTime = Integer.parseInt(lastTimeStr);
-                String delayFormat=systemInfo.getDelay().split("\\d")[1];
-
-                if(delayFormat.equals("Часы")){
-                    lastTime=lastTime*3600;
-                }
-                if(delayFormat.equals("Минуты")){
-                    lastTime=lastTime*60;
-                }
             }
             else
                 lastTime=0;
@@ -818,12 +800,14 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             String[] currentMode = systemInfo.getMode().split("\t");
             if(!currentMode[0].trim().toUpperCase().equals("ВЫКЛ")&&usingMode[0].trim().toUpperCase().equals("ВЫКЛ")){
                 MainWindow.getSystemInfoVector().remove(usedDevice);
+
                 boolean foundDublicate=true;
                 while(foundDublicate){
                     usedDevice = MainWindow.getSystemInfoVector().get(index);
                     usingMode = usedDevice.getMode().split("\t");
                     if(usingMode[0].trim().toUpperCase().equals("ВЫКЛ")){
-                        MainWindow.getSystemInfoVector().remove(usedDevice);
+                        //MainWindow.getSystemInfoVector().remove(usedDevice);
+                        while (MainWindow.getSystemInfoVector().remove(usedDevice)){}
                     }
                     else
                         foundDublicate=false;

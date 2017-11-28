@@ -9,6 +9,7 @@ import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Vector;
 
 public class ThreadResourceUpdater implements Runnable,WindowListener {
@@ -114,7 +115,7 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
             int i = 0;
             Object articleNode;
             while (!((articleNode = treeModel.getChild(rootNode, i)).toString().equals(article))) {
-                if (i == rootNode.getChildCount()-1) {
+                if (rootNode.getChildCount()>1&&i == rootNode.getChildCount()-1) {
                     JOptionPane.showMessageDialog(mainFrame, "error in first cycle", "Error", JOptionPane.ERROR_MESSAGE);
                     break;
                 }
@@ -139,6 +140,32 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
                 String resultString = resourceNamesUpdate.get(i) + ": " + articleResourcesUpdate.get(i) + " " + resourcesMeasurementsUpdate.get(i);
                 DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(resultString);
                 treeModel.insertNodeInto(newNode,resourcesNode,resourcesNode.getChildCount());
+                //TODO:update modes tomorrow
+            }
+            ArrayList<DefaultMutableTreeNode> newModeNodes=new ArrayList<>();
+            DefaultMutableTreeNode subsystemNode=(DefaultMutableTreeNode) ((DefaultMutableTreeNode) articleNode).getChildAt(0);
+            Vector<String> subsystems=DBConnection.queryToArticle(article);
+            for(String subsystem:subsystems){
+                Vector<String>devices=DBConnection.queryToSubsys(article,subsystem);
+                devices.removeAll(Collections.singleton(null));
+                for(String device:devices){
+
+                    Vector<String> modes=DBConnection.queryToDevice(article,subsystem,device);
+                    for(String mode:modes){
+                        DefaultMutableTreeNode newNode=new DefaultMutableTreeNode(mode);
+                        newModeNodes.add(newNode);
+                    }
+                }
+            }
+            int count=0;
+            for(i=0;i<subsystemNode.getChildCount();i++){
+                DefaultMutableTreeNode deviceNode=(DefaultMutableTreeNode) subsystemNode.getChildAt(i);
+                for(int j=0;j<deviceNode.getChildCount();j++){
+                    DefaultMutableTreeNode modeNode=(DefaultMutableTreeNode) deviceNode.getChildAt(j);
+                    treeModel.removeNodeFromParent(modeNode);
+                    treeModel.insertNodeInto(newModeNodes.get(count),deviceNode,deviceNode.getChildCount());
+                    count++;
+                }
             }
         });
 
@@ -214,7 +241,7 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
             int i = 0;
             Object articleNode;
             while (!((articleNode = treeModel.getChild(rootNode, i)).toString().equals(article))) {
-                if (i == rootNode.getChildCount() - 1) {
+                if (rootNode.getChildCount()>1&&i == rootNode.getChildCount() - 1) {
                     JOptionPane.showMessageDialog(mainFrame, "error in first cycle", "Error", JOptionPane.ERROR_MESSAGE);
                     break;
                 }
@@ -235,7 +262,7 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
             DefaultMutableTreeNode temp = (DefaultMutableTreeNode) subsystemNode;
             if (((DefaultMutableTreeNode) subsystemNode).getChildCount() > 0) {
                 while (!((deviceNode = treeModel.getChild(subsystemNode, i)).toString().equals(device))) {
-                    if (i == ((DefaultMutableTreeNode) subsystemNode).getChildCount() - 1) {
+                    if (((DefaultMutableTreeNode) subsystemNode).getChildCount()>1&&i == ((DefaultMutableTreeNode) subsystemNode).getChildCount() - 1) {
                         JOptionPane.showMessageDialog(mainFrame, "error in third cycle", "Error", JOptionPane.ERROR_MESSAGE);
                         break;
                     }
@@ -249,7 +276,7 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
             DefaultMutableTreeNode deviceMutableNode=(DefaultMutableTreeNode)deviceNode;
             i=0;
             while(!((modeNode=deviceMutableNode.getChildAt(i)).toString().equals(mode))){
-                if(i==deviceMutableNode.getChildCount()-1){
+                if(deviceMutableNode.getChildCount()>1&&i==deviceMutableNode.getChildCount()-1){
                     JOptionPane.showMessageDialog(mainFrame, "error in fourth cycle", "Error", JOptionPane.ERROR_MESSAGE);
                     break;
                 }
