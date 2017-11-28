@@ -1273,7 +1273,7 @@ public class DB {
         for (int i = 0; i < textFieldVector.size(); i += 3) {
             String textFieldVal = textFieldVector.get(i).getText();
             if(textFieldVal.isEmpty())
-                emptyFieldsIndexes.add(i);
+                emptyFieldsIndexes.add(i/3);
             if(!textFieldVal.isEmpty())
                 count++;
             }
@@ -1393,7 +1393,7 @@ public class DB {
                             pastModeUsage.add(string);
                         pastModeUsage.remove(0);
                         for(int i:emptyFieldsIndexes){
-                            pastModeUsage.remove(i-2);
+                            pastModeUsage.remove(i-1);
                         }
                         Vector<String> resourceConsumptionVector=new Vector<>();
                         //DROPPING
@@ -1521,10 +1521,31 @@ public class DB {
         for(String str:newConsumption ){
             secondInsertPart+=str+",";
         }
+        int id=getModeId(article,subsystem,device,pastModeName);
+        String updateQuery="UPDATE `ка`.`"+device+"_"+article+"_"+subsystem+"` SET режимы='"+newName+"' WHERE id="+id+"";
+        res=execUpdate(updateQuery);
         secondInsertPart=secondInsertPart.substring(0,secondInsertPart.length()-1);
         String insertModeQuery="INSERT INTO `режимы_"+device+"_"+article+"_"+subsystem+"` VALUES ('"+newName+"',"+secondInsertPart+");";
         res=execUpdate(insertModeQuery);
         int i=0;
+    }
+    private int getModeId(String article,String subsystem,String device,String modeName){
+        int resultNumber=0;
+        String query="SELECT * FROM `ка`.`"+device+"_"+article+"_"+subsystem+"`;";
+        Object resultObject=execQuery(query);
+        ResultSet resultSet=(ResultSet)resultObject;
+        try {
+            while(resultSet.next()){
+                String result=resultSet.getString("режимы");
+                if(result.equals(modeName)){
+                    resultNumber=resultSet.getInt("id");
+                    break;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return resultNumber;
     }
     private int getModeColumnsCount(String article,String subsystemName,String deviceName){
         String query="SELECT * FROM `режимы_"+deviceName+"_"+article+"_"+subsystemName+"`";

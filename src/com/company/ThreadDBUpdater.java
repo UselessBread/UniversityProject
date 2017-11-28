@@ -359,8 +359,8 @@ implements ActionListener,WindowListener{
                                     DefaultMutableTreeNode systemNode=(DefaultMutableTreeNode) treeModel.getChild(articleNode,0);
                                     Object subsystemNode;
                                     i = 0;
-                                    while (!(subsystemNode = treeModel.getChild(systemNode, i)).toString().toLowerCase().equals(selectedSubsystem)) {
-                                        if (i == rootNode.getChildCount()-1) {
+                                    while (!(subsystemNode = treeModel.getChild(systemNode, i)).toString().equals(selectedSubsystem)) {
+                                        if (rootNode.getChildCount()>1&&i == rootNode.getChildCount()-1) {
                                             JOptionPane.showMessageDialog(DBUpdaterFrame, "error in second cycle", "Error", JOptionPane.ERROR_MESSAGE);
                                             break;
                                         }
@@ -517,7 +517,7 @@ implements ActionListener,WindowListener{
                                     i = 0;
                                     Object articleNode;
                                     while (!((articleNode = treeModel.getChild(rootNode, i)).toString().equals(selectedArticle))) {
-                                        if (i == rootNode.getChildCount() - 1) {
+                                        if (rootNode.getChildCount()>1&&i == rootNode.getChildCount() - 1) {
                                             JOptionPane.showMessageDialog(DBUpdaterFrame, "error in first cycle", "Error", JOptionPane.ERROR_MESSAGE);
                                             break;
                                         }
@@ -527,7 +527,7 @@ implements ActionListener,WindowListener{
                                     Object subsystemNode;
                                     i = 0;
                                     while (!(subsystemNode = treeModel.getChild(systemNode, i)).toString().toLowerCase().equals(selectedSubsystem)) {
-                                        if (i == systemNode.getChildCount() - 1 && systemNode.getChildCount() > 1) {
+                                        if (systemNode.getChildCount()>1&&i == systemNode.getChildCount() - 1 && systemNode.getChildCount() > 1) {
                                             JOptionPane.showMessageDialog(DBUpdaterFrame, "error in second cycle", "Error", JOptionPane.ERROR_MESSAGE);
                                             break;
                                         }
@@ -538,7 +538,7 @@ implements ActionListener,WindowListener{
                                     DefaultMutableTreeNode temp = (DefaultMutableTreeNode) subsystemNode;
                                     if (((DefaultMutableTreeNode) subsystemNode).getChildCount() != 0) {
                                         while (!((deviceNode = treeModel.getChild(subsystemNode, i)).toString().toLowerCase().equals(selectedDevice))) {
-                                            if (i == ((DefaultMutableTreeNode) subsystemNode).getChildCount() - 1) {
+                                            if (((DefaultMutableTreeNode) subsystemNode).getChildCount()>1&&i == ((DefaultMutableTreeNode) subsystemNode).getChildCount() - 1) {
                                                 JOptionPane.showMessageDialog(DBUpdaterFrame, "error in third cycle", "Error", JOptionPane.ERROR_MESSAGE);
                                                 break;
                                             }

@@ -544,6 +544,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                             delayField.getText()+delayFormatChooser.getSelectedItem(),(String)queueChooser.getSelectedItem());
                     systemInfoVector.add(systemInfo);
                     usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
+                    recountResources(articleName,mode,systemInfo);
                     handleWithTime(systemInfo);
                     delayFrame.dispose();
                 }
@@ -586,16 +587,14 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                         writeName(name);
                         saveFrame.dispose();
                         openedAlgorithms.setText("");
+                        //TODO:Make it work tomorrow
                         MainWindow.getSystemInfoVectorForSaving().clear();
                        DefaultMutableTreeNode temp=(DefaultMutableTreeNode)tree.getLastSelectedPathComponent();
                        DefaultTreeModel treeModel=(DefaultTreeModel) tree.getModel();
                        DefaultMutableTreeNode articleNode=(DefaultMutableTreeNode) treeModel.getPathToRoot(temp)[1];
-                       DefaultMutableTreeNode algorithmsNode=(DefaultMutableTreeNode)treeModel.getChild(articleNode,1);
+                       DefaultMutableTreeNode algorithmsNode=(DefaultMutableTreeNode)treeModel.getChild(articleNode,2);
                        DefaultMutableTreeNode variantNode=(DefaultMutableTreeNode)treeModel.getChild(algorithmsNode,0);
                        treeModel.insertNodeInto(new DefaultMutableTreeNode(name),variantNode,variantNode.getChildCount());
-                        /*DefaultMutableTreeNode newTop = new DefaultMutableTreeNode("Изделия");
-                        tree=new JTree(newTop);
-                        createTree(newTop);*/
 
                     } else {
                         JOptionPane.showMessageDialog(mainFrame, "Выберите другое имя", "Выберите другое имя", JOptionPane.ERROR_MESSAGE);
@@ -641,9 +640,10 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c","").trim();
                 int lastTime = Integer.parseInt(lastTimeStr);
                 String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
-                String delayFormat=systemInfo.getDelay().split("\\d")[1];
+
 
                 int time = Integer.parseInt(delay[0]);
+                String delayFormat=systemInfo.getDelay().split("\\d")[1];
                 if(delayFormat.equals("Часы")){
                     time=time*3600;
                 }
@@ -657,8 +657,9 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             }
             else{
                 String[] delay=systemInfo.getDelay().split("[а-яА-Я]");
-                String delayFormat=systemInfo.getDelay().split("\\d")[1];
+
                 int time = Integer.parseInt(delay[0]);
+                String delayFormat=systemInfo.getDelay().split("\\d")[1];
                 if(delayFormat.equals("Часы")){
                     time=time*3600;
                 }
@@ -676,7 +677,6 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             if(!text.isEmpty()) {
                 lastLine = text.split("\n")[openedAlgorithms.getLineCount() - 2];
                 String lastTimeStr = lastLine.split("\\u007c")[0].replace("=", "").replace("c", "").trim();
-                lastTime = Integer.parseInt(lastTimeStr);
                 lastTime = Integer.parseInt(lastTimeStr);
                 String delayFormat=systemInfo.getDelay().split("\\d")[1];
 
@@ -759,10 +759,10 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
     public void valueChanged(TreeSelectionEvent e) {
         //Make backup and search for saved for chosen article
         TreePath oldSelection = e.getOldLeadSelectionPath();
-        if (oldSelection != null) {
+        if (oldSelection != null&&e.getNewLeadSelectionPath()!=null) {
             String[] oldSplittedPath = oldSelection.toString().split(",");
             String oldArticleName = oldSplittedPath[1].replace("]", "").trim();
-            TreePath selectionPath = tree.getSelectionPath();
+            TreePath selectionPath = e.getNewLeadSelectionPath();
             String stringPath = selectionPath.toString();
             String[] splittedStringPath = stringPath.split(",");
             String newArticleName = splittedStringPath[1].replace("]", "").trim();
