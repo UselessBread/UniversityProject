@@ -181,6 +181,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             try {
                 BufferedWriter writer=Files.newBufferedWriter(usedResourcesPath,TRUNCATE_EXISTING);
                 writer.close();
+                usingDevices.clear();
                 //Reset resource monitor
                 resourceMonitor.setText("");
                 setResourceMonitor();
@@ -533,7 +534,8 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                     SystemInfo systemInfo=new SystemInfo(articleName,subsystemName,deviceName,mode,"","");
                     systemInfoVector.add(systemInfo);
                     recountResources(articleName,mode,systemInfo);
-                    usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
+                    if(!systemInfo.getMode().toLowerCase().equals("выкл"))
+                        usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
 
                     handleWithTime(systemInfo);
                     delayFrame.dispose();
@@ -544,7 +546,8 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                             delayField.getText()+delayFormatChooser.getSelectedItem(),(String)queueChooser.getSelectedItem());
                     systemInfoVector.add(systemInfo);
                     recountResources(articleName,mode,systemInfo);
-                    usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
+                    if(!systemInfo.getMode().toLowerCase().equals("выкл"))
+                        usingDevices.add(systemInfo.getInfoWithoutDelayAndMode());
                     handleWithTime(systemInfo);
                     delayFrame.dispose();
                 }
@@ -763,8 +766,9 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 }
                 algorithmDescription.setText(labelString);
                 //String[] splittedStringPath = oldSelection.toString().split(",");
-                ArticleBackup backup = new ArticleBackup(openedAlgorithmsText, systemInfoVector);
+                ArticleBackup backup = new ArticleBackup(openedAlgorithmsText, systemInfoVector,usingDevices);
                 systemInfoVector.clear();
+                usingDevices.clear();
                 openedAlgorithms.setText("");
                 articleBackupHashMap.put(article, backup);
                 if (articleBackupHashMap.size() > 1) {
@@ -776,6 +780,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                     if ((pastBackup = articleBackupHashMap.get(newArticle)) != null) {
                         openedAlgorithms.setText(pastBackup.getOpenedAlgorithmsContent());
                         systemInfoVector = pastBackup.getSystemInfoVector();
+                        usingDevices=pastBackup.getUsingDevices();
                         setResourceMonitor();
                     } else {
                         setResourceMonitor();
@@ -817,27 +822,37 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
             Vector<String> resourcesNames=DBC.getResourcesNames(articleName);
             int size=resourceMonitor.getText().split("\t").length;
             if (currentMode[0].trim().toUpperCase().equals("ВЫКЛ")&&!(usingMode[0].trim().toUpperCase().equals("ВЫКЛ"))) {
-                //usingDevices.remove(usingDevices.indexOf(systemInfo.getInfoWithoutDelayAndMode()));
-                MainWindow.getSystemInfoVector().remove(usedDevice);
-                String resources = resourceMonitor.getText();
-                String[] tempRes = resources.split("\t");
-                ArrayList<Double> currentResourceUsageList=new ArrayList<>();
-                for(int i=0;i<size;i++){
-                    Double prevResourceUsage=Double.parseDouble(usingMode[i+1]);
-                    Double currentResourceUsage= Double.parseDouble(tempRes[i].split("/")[0].split(":")[1]);
-                    if(currentResourceUsage>0){
-                        currentResourceUsage=currentResourceUsage-prevResourceUsage;
-                        currentResourceUsageList.add(currentResourceUsage);
-                    }
-                }
-                Vector<String> resourcesMeas=DBC.getArticleResourceNames(articleName);
-                String newResourcesString="";
-                Vector<String> articleResources=DBC.getArticleResources(articleName);
-                for(int i=0;i<size;i++){
-                    newResourcesString+=resourcesNames.get(i)+":"+Double.toString(currentResourceUsageList.get(i)) + "/" + articleResources.get(i) +resourcesMeas.get(i)+ "\t";
 
+                while ((index = usingDevices.indexOf(systemInfo.getInfoWithoutDelayAndMode()))!=-1) {
+                    usingDevices.remove(index);
+                    usedDevice = MainWindow.getSystemInfoVector().get(index);
+                    usingMode = usedDevice.getMode().split("\t");
+                    currentMode = systemInfo.getMode().split("\t");
+                    //usingDevices.remove(usingDevices.indexOf(systemInfo.getInfoWithoutDelayAndMode()));
+                    MainWindow.getSystemInfoVector().remove(usedDevice);
+                    String resources = resourceMonitor.getText();
+                    String[] tempRes = resources.split("\t");
+                    ArrayList<Double> currentResourceUsageList = new ArrayList<>();
+                    for (int i = 0; i < size; i++) {
+                        Double prevResourceUsage = Double.parseDouble(usingMode[i + 1]);
+                        Double currentResourceUsage = Double.parseDouble(tempRes[i].split("/")[0].split(":")[1]);
+                        if (currentResourceUsage > 0) {
+                            currentResourceUsage = currentResourceUsage - prevResourceUsage;
+                            currentResourceUsageList.add(currentResourceUsage);
+                        }
+                    }
+                    Vector<String> resourcesMeas = DBC.getArticleResourceNames(articleName);
+                    String newResourcesString = "";
+                    Vector<String> articleResources = DBC.getArticleResources(articleName);
+                    for (int i = 0; i < size; i++) {
+                        try {
+                            newResourcesString += resourcesNames.get(i) + ":" + Double.toString(currentResourceUsageList.get(i)) + "/" + articleResources.get(i) + resourcesMeas.get(i) + "\t";
+                        }catch (IndexOutOfBoundsException ex){
+                            return;
+                        }
+                    }
+                    resourceMonitor.setText(newResourcesString);
                 }
-                resourceMonitor.setText(newResourcesString);
             }
             else{
                 String[] tempResources = resourceMonitor.getText().split("\t");
@@ -850,7 +865,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
                 }
                 resourcesNames=DBC.getArticleResourceNames(articleName);
                 Vector<String> articleResources=DBC.getArticleResources(articleName);
-            Vector<String> resourceNames=DBC.getResourcesNames(articleName);
+                Vector<String> resourceNames=DBC.getResourcesNames(articleName);
                 String newResourcesString="";
                 for(int i=0;i<size;i++){
                     newResourcesString+=resourceNames.get(i)+":"+Double.toString(currentResourceUsageList.get(i)) + "/" + articleResources.get(i) + resourcesNames.get(i)+"\t";
@@ -933,6 +948,7 @@ public class MainWindow extends JPanel implements ActionListener,MouseListener,T
     public static Path getUsedResourcesPath() {
         return usedResourcesPath;
     }
+
 
     private void setResourceMonitor(){
         TreePath selectionPath = tree.getSelectionPath();
