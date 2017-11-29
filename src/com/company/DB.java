@@ -1289,38 +1289,38 @@ public class DB {
             Vector<String> deviceName = getDeviceNames(article, subsystem);
             if (sensorName.size() > 0) {
                 for (String str : sensorName) {
-                    int differ =   (count - 1)-defaultSize;
+                    int differ = (count - 1) - defaultSize;
                     int currentTableSize = getModeColumnsCount(article, subsystem, str);
                     if (differ > 0) {
-                        String add="";
-                        int sum=currentTableSize+differ;
-                        for(;currentTableSize<sum;currentTableSize++){
-                            if(currentTableSize<(sum-1)) {
+                        String add = "";
+                        int sum = currentTableSize + differ;
+                        for (; currentTableSize < sum; currentTableSize++) {
+                            if (currentTableSize < (sum - 1)) {
                                 add += "ADD COLUMN `потребление_ресурса" + (currentTableSize + 1) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + currentTableSize + "`,\n";
 
-                            }
-                            else {
+                            } else {
                                 add += "ADD COLUMN `потребление_ресурса" + (currentTableSize + 1) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + currentTableSize + "`;\n";
 
                             }
                         }
                         //ADDING
-                        String addQuery = "ALTER TABLE `ка`.`режимы_" + str + "_" + article + "_" + subsystem + "` \n" +add;
-                        res=execUpdate(addQuery);
+                        String addQuery = "ALTER TABLE `ка`.`режимы_" + str + "_" + article + "_" + subsystem + "` \n" + add;
+                        res = execUpdate(addQuery);
                     }
                     if (differ < 0) {
-                        Vector<String> pastModeUsage=new Vector<>();
-                        Vector<String> resultVec=queryToSensor(article.toLowerCase(),subsystem.toLowerCase(),str.toLowerCase());
-                        String[] splittedVec=resultVec.get(0).split("\t");
-                        for(String string:splittedVec)
+                        Vector<String> pastModeUsage = new Vector<>();
+                        Vector<String> resultVec = queryToSensor(article.toLowerCase(), subsystem.toLowerCase(), str.toLowerCase());
+
+                        String[] splittedVec = resultVec.get(0).split("\t");
+                        for (String string : splittedVec)
                             pastModeUsage.add(string);
                         pastModeUsage.remove(0);
-                        for(int i:emptyFieldsIndexes){
-                            pastModeUsage.remove(i-2);
+                        for (int i : emptyFieldsIndexes) {
+                            pastModeUsage.remove(i - 2);
                         }
-                        Vector<String> resourceConsumptionVector=new Vector<>();
+                        Vector<String> resourceConsumptionVector = new Vector<>();
                         //DROPPING
-                        String resourceConsumption="потребление_ресурса1";
+                        String resourceConsumption = "потребление_ресурса1";
                         resourceConsumptionVector.add(resourceConsumption);
                         String dropPart = "";
                         String addPart = "ADD COLUMN `потребление_ресурса" + 1 + "` DOUBLE NULL DEFAULT 0 AFTER `idрежима`,\n";
@@ -1331,33 +1331,33 @@ public class DB {
                                 dropPart += "DROP COLUMN `потребление_ресурса" + (i + 1) + "`;\n";
                             }
                         }
-                        for(int i=0;i<(defaultSize+differ-1);i++){
+                        for (int i = 0; i < (defaultSize + differ - 1); i++) {
                             if (i < (defaultSize - 1)) {
-                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i+1) + "`,\n";
-                                resourceConsumptionVector.add("потребление_ресурса"+(i + 2));
+                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i + 1) + "`,\n";
+                                resourceConsumptionVector.add("потребление_ресурса" + (i + 2));
                             } else {
-                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i+1) + "`;\n";
-                                resourceConsumptionVector.add("потребление_ресурса"+(i + 2));
+                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i + 1) + "`;\n";
+                                resourceConsumptionVector.add("потребление_ресурса" + (i + 2));
                             }
                         }
-                        if(dropPart.lastIndexOf(',')==(dropPart.length()-2)){
-                            dropPart=dropPart.substring(0,dropPart.length()-2);
+                        if (dropPart.lastIndexOf(',') == (dropPart.length() - 2)) {
+                            dropPart = dropPart.substring(0, dropPart.length() - 2);
                         }
-                        if(addPart.lastIndexOf(',')==(addPart.length()-2)){
-                            addPart=addPart.substring(0,addPart.length()-2);
+                        if (addPart.lastIndexOf(',') == (addPart.length() - 2)) {
+                            addPart = addPart.substring(0, addPart.length() - 2);
                         }
-                        String dropModeQuery = "ALTER TABLE `ка`.`режимы_"+str.toLowerCase()+"_"+article+"_"+subsystem.toLowerCase()+"` \n" + dropPart;
+                        String dropModeQuery = "ALTER TABLE `ка`.`режимы_" + str.toLowerCase() + "_" + article + "_" + subsystem.toLowerCase() + "` \n" + dropPart;
                         res = execUpdate(dropModeQuery);
-                        String addModeQuery = "ALTER TABLE `ка`.`режимы_"+str.toLowerCase()+"_"+article+"_"+subsystem.toLowerCase()+"` \n" + addPart;
+                        String addModeQuery = "ALTER TABLE `ка`.`режимы_" + str.toLowerCase() + "_" + article + "_" + subsystem.toLowerCase() + "` \n" + addPart;
                         res = execUpdate(addModeQuery);
-                        Vector<String> secondInsertPart=new Vector<>();
-                        for(int i=0;i<pastModeUsage.size();i++){
-                            if(i<(pastModeUsage.size()-1))
-                                secondInsertPart.add(resourceConsumptionVector.get(i)+"="+pastModeUsage.get(i));
+                        Vector<String> secondInsertPart = new Vector<>();
+                        for (int i = 0; i < pastModeUsage.size(); i++) {
+                            if (i < (pastModeUsage.size() - 1))
+                                secondInsertPart.add(resourceConsumptionVector.get(i) + "=" + pastModeUsage.get(i));
                             else
-                                secondInsertPart.add(resourceConsumptionVector.get(i)+"="+pastModeUsage.get(i));
+                                secondInsertPart.add(resourceConsumptionVector.get(i) + "=" + pastModeUsage.get(i));
                         }
-                        for(int i=0;i<secondInsertPart.size();i++) {
+                        for (int i = 0; i < secondInsertPart.size(); i++) {
                             String insertToModeQuery = "UPDATE `ка`.`режимы_" + str.toLowerCase() + "_" + article + "_" + subsystem.toLowerCase() + "` SET " + secondInsertPart.get(i) + " WHERE idрежима='режим1'";
                             res = execUpdate(insertToModeQuery);
                         }
@@ -1367,37 +1367,39 @@ public class DB {
             }
             if (deviceName.size() > 0) {
                 for (String str : deviceName) {
-                    int differ = (count - 1)-defaultSize;
+                    int differ = (count - 1) - defaultSize;
                     int currentTableSize = getModeColumnsCount(article, subsystem, str);
                     if (differ > 0) {
-                        String add="";
-                        int sum=currentTableSize+differ;
-                        for(;currentTableSize<sum;currentTableSize++){
+                        String add = "";
+                        int sum = currentTableSize + differ;
+                        for (; currentTableSize < sum; currentTableSize++) {
                             //TODO : проверка на наличие столбца потребление ресурса. Если нет, то первую вставить после idрежима КАКОГО ХЕРА sum==1?
-                            if(currentTableSize<(sum-1)) {
+                            if (currentTableSize < (sum - 1)) {
                                 add += "ADD COLUMN `потребление_ресурса" + (currentTableSize + 1) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + currentTableSize + "`,\n";
-                            }
-                            else
+                            } else
                                 add += "ADD COLUMN `потребление_ресурса" + (currentTableSize + 1) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + currentTableSize + "`;\n";
                         }
                         //ADDING
-                        String addQuery = "ALTER TABLE `ка`.`режимы_" + str + "_" + article + "_" + subsystem + "` \n" +add;
-                        res=execUpdate(addQuery);
-                        int c=0;
+                        String addQuery = "ALTER TABLE `ка`.`режимы_" + str + "_" + article + "_" + subsystem + "` \n" + add;
+                        res = execUpdate(addQuery);
+                        int c = 0;
                     }
                     if (differ < 0) {
-                        Vector<String> pastModeUsage=new Vector<>();
-                        Vector<String> resultVec=queryToDevice(article.toLowerCase(),subsystem.toLowerCase(),str.toLowerCase());
-                        String[] splittedVec=resultVec.get(0).split("\t");
-                        for(String string:splittedVec)
+                        Vector<String> pastModeUsage = new Vector<>();
+                        Vector<String> resultVec = queryToDevice(article.toLowerCase(), subsystem.toLowerCase(), str.toLowerCase());
+
+                        String[] splittedVec = resultVec.get(0).split("\t");
+                        for (String string : splittedVec)
                             pastModeUsage.add(string);
                         pastModeUsage.remove(0);
-                        for(int i:emptyFieldsIndexes){
-                            pastModeUsage.remove(i-1);
+                        while (pastModeUsage.removeElement("0")) {
                         }
-                        Vector<String> resourceConsumptionVector=new Vector<>();
+                        //for(int i:emptyFieldsIndexes){
+                        //  pastModeUsage.remove(i);
+                        //}
+                        Vector<String> resourceConsumptionVector = new Vector<>();
                         //DROPPING
-                        String resourceConsumption="потребление_ресурса1";
+                        String resourceConsumption = "потребление_ресурса1";
                         resourceConsumptionVector.add(resourceConsumption);
                         String dropPart = "";
                         String addPart = "ADD COLUMN `потребление_ресурса" + 1 + "` DOUBLE NULL DEFAULT 0 AFTER `idрежима`,\n";
@@ -1408,36 +1410,57 @@ public class DB {
                                 dropPart += "DROP COLUMN `потребление_ресурса" + (i + 1) + "`;\n";
                             }
                         }
-                        for(int i=0;i<(defaultSize+differ-1);i++){
+                        for (int i = 0; i < (defaultSize + differ - 1); i++) {
                             if (i < (defaultSize - 1)) {
-                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i+1) + "`,\n";
-                                resourceConsumptionVector.add("потребление_ресурса"+(i + 2));
+                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i + 1) + "`,\n";
+                                resourceConsumptionVector.add("потребление_ресурса" + (i + 2));
                             } else {
-                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i+1) + "`;\n";
-                                resourceConsumptionVector.add("потребление_ресурса"+(i + 2));
+                                addPart += "ADD COLUMN `потребление_ресурса" + (i + 2) + "` DOUBLE NULL DEFAULT 0 AFTER `потребление_ресурса" + (i + 1) + "`;\n";
+                                resourceConsumptionVector.add("потребление_ресурса" + (i + 2));
                             }
                         }
-                        if(dropPart.lastIndexOf(',')==(dropPart.length()-2)){
-                            dropPart=dropPart.substring(0,dropPart.length()-2);
+                        if (dropPart.lastIndexOf(',') == (dropPart.length() - 2)) {
+                            dropPart = dropPart.substring(0, dropPart.length() - 2);
                         }
-                        if(addPart.lastIndexOf(',')==(addPart.length()-2)){
-                            addPart=addPart.substring(0,addPart.length()-2);
+                        if (addPart.lastIndexOf(',') == (addPart.length() - 2)) {
+                            addPart = addPart.substring(0, addPart.length() - 2);
                         }
-                        String dropModeQuery = "ALTER TABLE `ка`.`режимы_"+str.toLowerCase()+"_"+article+"_"+subsystem.toLowerCase()+"` \n" + dropPart;
+                        String dropModeQuery = "ALTER TABLE `ка`.`режимы_" + str.toLowerCase() + "_" + article + "_" + subsystem.toLowerCase() + "` \n" + dropPart;
                         res = execUpdate(dropModeQuery);
-                        String addModeQuery = "ALTER TABLE `ка`.`режимы_"+str.toLowerCase()+"_"+article+"_"+subsystem.toLowerCase()+"` \n" + addPart;
+                        String addModeQuery = "ALTER TABLE `ка`.`режимы_" + str.toLowerCase() + "_" + article + "_" + subsystem.toLowerCase() + "` \n" + addPart;
                         res = execUpdate(addModeQuery);
-                        Vector<String> secondInsertPart=new Vector<>();
-                        for(int i=0;i<pastModeUsage.size();i++){
-                            if(i<(pastModeUsage.size()-1))
-                                secondInsertPart.add(resourceConsumptionVector.get(i)+"="+pastModeUsage.get(i));
-                            else
-                                secondInsertPart.add(resourceConsumptionVector.get(i)+"="+pastModeUsage.get(i));
-                        }
-                        for(int i=0;i<secondInsertPart.size();i++) {
-                            String insertToModeQuery = "UPDATE `ка`.`режимы_" + str.toLowerCase() + "_" + article + "_" + subsystem.toLowerCase() + "` SET " + secondInsertPart.get(i) + " WHERE idрежима='режим1'";
-                            res = execUpdate(insertToModeQuery);
-                            int c = 0;
+                        Vector<String> secondInsertPart = new Vector<>();
+                        for (int j = 0; j < resultVec.size(); j++) {
+                            pastModeUsage.clear();
+                            secondInsertPart.clear();
+                            resourceConsumptionVector.clear();
+                            splittedVec = resultVec.get(j).split("\t");
+                            for (String string : splittedVec)
+                                pastModeUsage.add(string);
+                            pastModeUsage.remove(0);
+                            while (pastModeUsage.removeElement("0")) {
+                            }
+                            resourceConsumption = "потребление_ресурса1";
+                            resourceConsumptionVector.add(resourceConsumption);
+                            for (int i = 0; i < (defaultSize + differ - 1); i++) {
+                                if (i < (defaultSize - 1)) {
+                                    resourceConsumptionVector.add("потребление_ресурса" + (i + 2));
+                                } else {
+                                    resourceConsumptionVector.add("потребление_ресурса" + (i + 2));
+                                }
+                            }
+                            for (int i = 0; i < pastModeUsage.size(); i++) {
+                                if (i < (pastModeUsage.size() - 1))
+                                    secondInsertPart.add(resourceConsumptionVector.get(i) + "=" + pastModeUsage.get(i));
+                                else
+                                    secondInsertPart.add(resourceConsumptionVector.get(i) + "=" + pastModeUsage.get(i));
+                            }
+                            for (int i = 0; i < secondInsertPart.size(); i++) {
+                                String mode = resultVec.get(j).split("\t")[0];
+                                String insertToModeQuery = "UPDATE `ка`.`режимы_" + str.toLowerCase() + "_" + article + "_" + subsystem.toLowerCase() + "` SET " + secondInsertPart.get(i) + " WHERE idрежима='" + mode + "'";
+                                res = execUpdate(insertToModeQuery);
+                                int c = 0;
+                            }
                         }
                     }
                 }

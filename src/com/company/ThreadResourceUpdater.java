@@ -3,7 +3,6 @@ package com.company;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.WindowEvent;
@@ -16,11 +15,12 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
     private String mode;
     private JPanel mainPanel;
     private JPanel resourcePanel=new JPanel();
-    private JFrame mainFrame;
+    private static JFrame mainFrame;
     private DB DBConnection=new DB();
     private Vector<JTextField> textFieldVector=new Vector<>();
     ThreadResourceUpdater(String mode){
         this.mode=mode;
+
     }
 
     @Override
@@ -143,7 +143,7 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
                 //TODO:update modes tomorrow
             }
             ArrayList<DefaultMutableTreeNode> newModeNodes=new ArrayList<>();
-            DefaultMutableTreeNode subsystemNode=(DefaultMutableTreeNode) ((DefaultMutableTreeNode) articleNode).getChildAt(0);
+            DefaultMutableTreeNode subsystemsNode=(DefaultMutableTreeNode) ((DefaultMutableTreeNode) articleNode).getChildAt(0);
             Vector<String> subsystems=DBConnection.queryToArticle(article);
             for(String subsystem:subsystems){
                 Vector<String>devices=DBConnection.queryToSubsys(article,subsystem);
@@ -158,13 +158,20 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
                 }
             }
             int count=0;
-            for(i=0;i<subsystemNode.getChildCount();i++){
-                DefaultMutableTreeNode deviceNode=(DefaultMutableTreeNode) subsystemNode.getChildAt(i);
-                for(int j=0;j<deviceNode.getChildCount();j++){
-                    DefaultMutableTreeNode modeNode=(DefaultMutableTreeNode) deviceNode.getChildAt(j);
-                    treeModel.removeNodeFromParent(modeNode);
-                    treeModel.insertNodeInto(newModeNodes.get(count),deviceNode,deviceNode.getChildCount());
-                    count++;
+
+            for(i=0;i<subsystemsNode.getChildCount();i++){
+                DefaultMutableTreeNode subsystemNode=(DefaultMutableTreeNode) subsystemsNode.getChildAt(i);
+                for(int j=0;j<subsystemNode.getChildCount();j++){
+                    DefaultMutableTreeNode deviceNode=(DefaultMutableTreeNode) subsystemNode.getChildAt(j);
+                    int childCount=deviceNode.getChildCount();
+                    while(deviceNode.getChildCount()>0) {
+                        DefaultMutableTreeNode modeNode = (DefaultMutableTreeNode) deviceNode.getChildAt(0);
+                        treeModel.removeNodeFromParent(modeNode);
+                    }
+                    for(int k=0;k<childCount;k++){
+                        treeModel.insertNodeInto(newModeNodes.get(count), deviceNode, deviceNode.getChildCount());
+                        count++;
+                    }
                 }
             }
         });
@@ -303,6 +310,11 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
     }
     @Override
     public void windowClosing(WindowEvent e) {
+        try {
+            Thread.currentThread().join();
+        } catch (InterruptedException e1) {
+            Thread.currentThread().interrupt();
+        }
         Thread.currentThread().interrupt();
     }
     @Override
@@ -335,5 +347,9 @@ public class ThreadResourceUpdater implements Runnable,WindowListener {
             dimension = new Dimension(width, mainFrame.getSize().height - 1);
         }
         mainFrame.setSize(dimension);
+    }
+
+    public static JFrame getMainFrame() {
+        return mainFrame;
     }
 }
